@@ -75,6 +75,11 @@ def test_admin_auth_forbidden(client):
     response = client.get("/api/admin/registrants")
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
+    # Anonymous principal header should also redirect to login
+    headers_anon = {"X-MS-CLIENT-PRINCIPAL-NAME": "anonymous"}
+    response = client.get("/admin/nametags", headers=headers_anon, follow_redirects=False)
+    assert response.status_code == status.HTTP_307_TEMPORARY_REDIRECT
+
     # Unauthorized principal header
     headers = {"X-MS-CLIENT-PRINCIPAL-NAME": "attacker@princeton.edu"}
     response = client.get("/admin/nametags", headers=headers)

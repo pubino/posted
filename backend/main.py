@@ -222,7 +222,7 @@ def is_admin_authorized(request: Request) -> bool:
     if not principal_name and os.getenv("ALLOW_LOCAL_DEV_ADMIN") == "true":
         principal_name = request.headers.get("X-Mock-Admin-Principal", "bino@princeton.edu")
         
-    if not principal_name:
+    if not principal_name or principal_name.strip().lower() == "anonymous":
         return False
         
     # 3. Verify against allowed principals
@@ -292,7 +292,7 @@ async def nametags_webhook(
 async def get_admin_nametags(request: Request):
     if not is_admin_authorized(request):
         principal_name = request.headers.get("X-MS-CLIENT-PRINCIPAL-NAME")
-        if not principal_name and os.getenv("ALLOW_LOCAL_DEV_ADMIN") != "true":
+        if (not principal_name or principal_name.strip().lower() == "anonymous") and os.getenv("ALLOW_LOCAL_DEV_ADMIN") != "true":
             return RedirectResponse(url="/.auth/login/aad?post_login_redirect_uri=/admin/nametags")
         raise HTTPException(status_code=403, detail="Access Forbidden: Unauthorized user principal.")
     with open("frontend/admin_nametags.html", "r") as f:
