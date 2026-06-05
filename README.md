@@ -63,20 +63,49 @@ PYTHONPATH=. pytest -v
 
 ## Drupal 10 Remote Post Setup
 
-To automatically stream registrations to the **posted** app:
-1.  Navigate to your Drupal Webform: `/admin/structure/webform/manage/{webform_id}`.
-2.  Click **Emails/Handlers** -> **Add handler** -> **Remote post**.
-3.  Set the following settings:
+To automatically stream registrations to both the public poster directory and the private nametags dashboard, you configure two separate Remote Post handlers:
+
+### 1. Handler A: Poster Presenters Webhook (Public Directory)
+Used to populate the public-facing poster presentations index.
+*   **Webform Path**: Navigate to `/admin/structure/webform/manage/{webform_id}`.
+*   **Action**: Click **Emails/Handlers** -> **Add handler** -> **Remote post**.
+*   **Configurations**:
     *   **Title**: Poster Presenters Webhook
-    *   **Completed URL**: `https://posters.caarms.princeton.edu/api/drupal-webhook` (or your local development URL `http://localhost:8000/api/drupal-webhook` during testing).
-    *   **Updated URL**: `https://posters.caarms.princeton.edu/api/drupal-webhook` (this ensures edits and updates on the Drupal side are synchronized in real-time).
-4.  Under the **Advanced** settings section, locate the **Custom options** text area and enter the header authentication token:
+    *   **Completed URL**: `https://posters.caarms.princeton.edu/api/drupal-webhook` (or `http://localhost:8000/api/drupal-webhook` for local dev).
+    *   **Updated URL**: `https://posters.caarms.princeton.edu/api/drupal-webhook` (to capture metadata edits in real time).
+*   **Security (Advanced Settings)**: In the **Custom options** YAML text area, input the token header:
     ```yaml
     headers:
-      X-Drupal-Webhook-Token: <your_secret_token>
+      X-Drupal-Webhook-Token: <your_drupal_webhook_token_secret>
     ```
-5.  In the **Submission data** tab, ensure the fields are selected and mapped: `registrant_name`, `email_address`, `presenting_poster`, `poster_title`, `faculty_adviser_name`, `poster_presentation_abstract`, and `home_institution_or_organization`.
-6.  Save the configuration.
+*   **Submission Data**: Ensure the following Drupal form fields are checked to send in the payload:
+    *   `registrant_name` (or separate `first_name` and `last_name` fields)
+    *   `email_address` (or `email`/`mail`)
+    *   `presenting_poster` (triggers public visibility if value evaluates to "Yes"/"1"/"true")
+    *   `poster_title`
+    *   `faculty_adviser_name`
+    *   `poster_presentation_abstract`
+
+### 2. Handler B: Registrants Nametags Webhook (Admin Portal)
+Used to populate the complete attendee list for badge compilation and print sheets.
+*   **Action**: Click **Emails/Handlers** -> **Add handler** -> **Remote post**.
+*   **Configurations**:
+    *   **Title**: Registrants Nametags Webhook
+    *   **Completed URL**: `https://posters.caarms.princeton.edu/api/nametags-webhook` (or `http://localhost:8000/api/nametags-webhook` for local dev).
+    *   **Updated URL**: `https://posters.caarms.princeton.edu/api/nametags-webhook` (to capture metadata/role modifications).
+*   **Security (Advanced Settings)**: In the **Custom options** YAML text area, input the token header:
+    ```yaml
+    headers:
+      X-Drupal-Webhook-Token: <your_nametags_webhook_token_secret>
+    ```
+*   **Submission Data**: Ensure the following Drupal form fields are checked to send in the payload:
+    *   `registrant_name` (or separate `first_name` and `last_name` fields)
+    *   `email_address` (or `email`/`mail`)
+    *   `home_institution_or_organization`
+    *   `attendee_status` (e.g. Speaker, Attendee, Organizer)
+    *   `student` (e.g. Yes/No)
+    *   `t_shirt_size`
+    *   `presenting_poster`
 
 ---
 
