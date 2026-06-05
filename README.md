@@ -21,7 +21,7 @@ A lightweight Python (FastAPI) web portal that collects and displays poster pres
 To syndicate poster presentations to external department sites or widgets, consume one of the public endpoints:
 *   **RSS URL**: `https://posters.caarms.princeton.edu/feed.xml` (or `/rss.xml`)
 *   **Ordering**: Alphabetical by presenter's last name.
-*   **Content**: Each `<item>` contains the poster title, permalink anchor (e.g. `/#presenter-uuid`), registration date, and a description containing the presenter name, faculty adviser, and full abstract.
+*   **Content**: Each `<item>` contains the poster title, filtered URL (e.g. `/?presenter=uuid`), registration date, and a description containing the presenter name and faculty adviser (excluding the abstract).
 
 ---
 
