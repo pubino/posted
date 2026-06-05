@@ -37,7 +37,7 @@
     /* Clean fallback overrides to guarantee perfect matching visual integration */
     body {
       font-family: 'Libre Franklin', sans-serif;
-      background-color: #fcfcfc;
+      background-color: #ffffff !important;
       color: #2b2b2b;
     }
     
@@ -52,6 +52,7 @@
       font-weight: 700;
       margin-bottom: 2.5rem;
       font-size: 2.5rem;
+      border-bottom: none !important;
     }
 
     /* Presenter card styling */
@@ -63,53 +64,24 @@
       padding: 2rem;
       margin-bottom: 2rem;
       box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
-      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-    }
-    
-
-    
-    .presenter-name {
-      font-family: 'Lora', serif;
-      font-size: 1.5rem;
-      font-weight: 700;
-      color: #f58025;
-      margin-top: 0;
-      margin-bottom: 0.5rem;
     }
     
     .poster-title {
-      font-family: 'Libre Franklin', sans-serif;
-      font-weight: 600;
-      font-size: 1.2rem;
-      color: #2b2b2b;
-      margin-bottom: 0.75rem;
+      font-family: 'Lora', serif;
+      font-weight: 700;
+      font-size: 1.5rem;
+      color: #1a1a1a;
+      margin-top: 0;
+      margin-bottom: 0.5rem;
       line-height: 1.4;
+    }
+    
+    .presenter-name {
+      font-family: 'sofia-pro', sans-serif;
     }
     
     .presenter-adviser {
       font-family: 'sofia-pro', sans-serif;
-      font-size: 0.95rem;
-      color: #666;
-      margin-bottom: 1rem;
-      background: #f8f9fa;
-      display: inline-block;
-      padding: 0.25rem 0.75rem;
-      border-radius: 4px;
-      border: 1px solid #eee;
-    }
-
-    .presenter-adviser strong {
-      color: #444;
-    }
-    
-    .presenter-abstract-title {
-      font-weight: 700;
-      font-size: 0.95rem;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      color: #555;
-      margin-top: 1rem;
-      margin-bottom: 0.5rem;
     }
 
     .presenter-abstract {
@@ -300,8 +272,10 @@
         // Render HTML for each presenter
         listEl.innerHTML = backButtonHtml + presenters.map(p => `
           <div class="presenter-card" id="presenter-${p.id}">
-            <h3 class="presenter-name">${escapeHtml(p.first_name)} ${escapeHtml(p.last_name)}</h3>
-            <h4 class="poster-title">${escapeHtml(p.poster_title)}</h4>
+            <h3 class="poster-title">${escapeHtml(p.poster_title)}</h3>
+            <div class="presenter-name">
+              <strong>Presenter:</strong> ${escapeHtml(p.first_name)} ${escapeHtml(p.last_name)}
+            </div>
             <div class="presenter-adviser">
               <strong>Faculty Adviser:</strong> ${escapeHtml(p.faculty_adviser_name)}
             </div>
