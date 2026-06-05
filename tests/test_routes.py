@@ -164,3 +164,36 @@ def test_list_presenters_sorting(client, db_session):
     assert presenters[0]["last_name"] == "Alpha"
     assert presenters[1]["last_name"] == "Beta"
     assert presenters[2]["last_name"] == "Zeta"
+
+def test_rss_feed_generation(client, db_session):
+    # Insert multiple presenters in random alphabetical order
+    p1 = Presenter(id="1", email_address="z@example.com", first_name="Zack", last_name="Zeta", poster_title="Quantum Physics", faculty_adviser_name="Adviser Z", poster_presentation_abstract="Abstract Z", is_visible=True)
+    p2 = Presenter(id="2", email_address="a@example.com", first_name="Abby", last_name="Alpha", poster_title="Astrophysics", faculty_adviser_name="Adviser A", poster_presentation_abstract="Abstract A", is_visible=True)
+    p3 = Presenter(id="3", email_address="h@example.com", first_name="Hidden", last_name="Hide", poster_title="Hidden Physics", faculty_adviser_name="Adviser H", poster_presentation_abstract="Abstract H", is_visible=False) # Invisible
+    
+    db_session.add_all([p1, p2, p3])
+    db_session.commit()
+
+    # Query public feed endpoint
+    response = client.get("/feed.xml")
+    assert response.status_code == status.HTTP_200_OK
+    assert "application/rss+xml" in response.headers["content-type"]
+    
+    # Assert RSS XML output has correct elements
+    xml_text = response.text
+    assert "<rss version=\"2.0\"" in xml_text
+    assert "<channel>" in xml_text
+    assert "<title>CAARMS 2026 Poster Presenters</title>" in xml_text
+    
+    # Should include visible presenter details
+    assert "Astrophysics (Abby Alpha)" in xml_text
+    assert "Quantum Physics (Zack Zeta)" in xml_text
+    
+    # Should NOT include invisible presenter details
+    assert "Hidden Physics" not in xml_text
+    
+    # The order of items in XML string should reflect alphabetical ordering by last name: Alpha then Zeta
+    idx_alpha = xml_text.find("Alpha")
+    idx_zeta = xml_text.find("Zeta")
+    assert idx_alpha < idx_zeta
+

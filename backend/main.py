@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, Header, HTTPException, status, Request
+from fastapi import FastAPI, Depends, Header, HTTPException, status, Request, Response
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
@@ -59,6 +59,64 @@ async def get_index_html():
     with open("frontend/index.html", "r") as f:
         content = f.read()
     return HTMLResponse(content=content)
+
+
+# --- RSS Feed Routers ---
+
+@app.get("/feed.xml")
+@app.get("/rss.xml")
+async def get_rss_feed(request: Request, db: Session = Depends(get_db)):
+    import email.utils
+    import xml.etree.ElementTree as ET
+    from datetime import timezone
+
+    # Query all visible presenters, ordered alphabetically by last name
+    presenters = db.query(Presenter)\
+        .filter(Presenter.is_visible == True)\
+        .order_by(Presenter.last_name.asc(), Presenter.first_name.asc())\
+        .all()
+
+    base_url = str(request.base_url).rstrip("/")
+    now = datetime.datetime.now(timezone.utc)
+
+    # Construct RSS 2.0 XML
+    rss = ET.Element("rss", version="2.0", **{"xmlns:atom": "http://www.w3.org/2005/Atom"})
+    channel = ET.SubElement(rss, "channel")
+
+    ET.SubElement(channel, "title").text = "CAARMS 2026 Poster Presenters"
+    ET.SubElement(channel, "link").text = f"{base_url}/"
+    ET.SubElement(channel, "description").text = "List of registered poster presentations for CAARMS 2026."
+    
+    # Self reference link
+    ET.SubElement(channel, "atom:link", href=f"{base_url}/feed.xml", rel="self", type="application/rss+xml")
+    
+    # Last Build Date (RFC 822 format)
+    ET.SubElement(channel, "lastBuildDate").text = email.utils.format_datetime(now)
+
+    for p in presenters:
+        item = ET.SubElement(channel, "item")
+        
+        # Title of item
+        name_str = f"{p.first_name} {p.last_name}" if (p.first_name or p.last_name) else "Unknown Presenter"
+        title_str = p.poster_title or "Untitled Presentation"
+        ET.SubElement(item, "title").text = f"{title_str} ({name_str})"
+        
+        # Link back to presenter details on page
+        ET.SubElement(item, "link").text = f"{base_url}/#presenter-{p.id}"
+        ET.SubElement(item, "guid", isPermaLink="false").text = p.id
+        
+        # PubDate
+        pub_dt = p.registered_at.replace(tzinfo=timezone.utc) if p.registered_at else now
+        ET.SubElement(item, "pubDate").text = email.utils.format_datetime(pub_dt)
+        
+        # Description containing full details (safe XML formatting)
+        adviser = p.faculty_adviser_name or "N/A"
+        abstract = p.poster_presentation_abstract or ""
+        desc_content = f"Presenter: {name_str}\nFaculty Adviser: {adviser}\n\nAbstract:\n{abstract}"
+        ET.SubElement(item, "description").text = desc_content
+
+    xml_data = ET.tostring(rss, encoding="utf-8", xml_declaration=True)
+    return Response(content=xml_data, media_type="application/rss+xml")
 
 
 # --- API Endpoints ---
