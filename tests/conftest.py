@@ -9,6 +9,8 @@ import os
 os.environ["DATABASE_URL"] = "sqlite:///:memory:"
 os.environ["DEV_MODE"] = "True"
 os.environ["DRUPAL_WEBHOOK_TOKEN"] = "test_webhook_token"
+os.environ["NAMETAGS_WEBHOOK_TOKEN"] = "test_webhook_token"
+os.environ["ALLOWED_ADMIN_PRINCIPALS"] = "bino@princeton.edu"
 os.environ["TARGET_HOST"] = "https://caarms.princeton.edu"
 
 from backend.main import app, get_db

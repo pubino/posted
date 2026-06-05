@@ -69,6 +69,8 @@ ACR_NAME="$ACR_NAME"
 PLAN_NAME="$PLAN_NAME"
 APP_NAME="$APP_NAME"
 DRUPAL_WEBHOOK_TOKEN="$DRUPAL_WEBHOOK_TOKEN"
+NAMETAGS_WEBHOOK_TOKEN="$NAMETAGS_WEBHOOK_TOKEN"
+ALLOWED_ADMIN_PRINCIPALS="$ALLOWED_ADMIN_PRINCIPALS"
 TARGET_HOST="$TARGET_HOST"
 EOF
 }
@@ -122,6 +124,20 @@ fi
 echo -n "Enter Drupal Webhook Secret Token [$DRUPAL_WEBHOOK_TOKEN]: "
 read input
 DRUPAL_WEBHOOK_TOKEN=${input:-$DRUPAL_WEBHOOK_TOKEN}
+save_configs
+
+if [ -z "$NAMETAGS_WEBHOOK_TOKEN" ]; then
+    NAMETAGS_WEBHOOK_TOKEN=$(head /dev/urandom | LC_ALL=C tr -dc 'A-Za-z0-9' | head -c 16 ; echo '')
+fi
+echo -n "Enter Nametags Webhook Secret Token [$NAMETAGS_WEBHOOK_TOKEN]: "
+read input
+NAMETAGS_WEBHOOK_TOKEN=${input:-$NAMETAGS_WEBHOOK_TOKEN}
+save_configs
+
+ALLOWED_ADMIN_PRINCIPALS_DEFAULT=${ALLOWED_ADMIN_PRINCIPALS:-"bino@princeton.edu"}
+echo -n "Enter Allowed Admin Principals (comma-separated) [$ALLOWED_ADMIN_PRINCIPALS_DEFAULT]: "
+read input
+ALLOWED_ADMIN_PRINCIPALS=${input:-$ALLOWED_ADMIN_PRINCIPALS_DEFAULT}
 save_configs
 
 TARGET_HOST_DEFAULT=${TARGET_HOST:-"https://caarms.princeton.edu"}
@@ -215,6 +231,8 @@ az webapp config appsettings set --resource-group "$RG_NAME" --name "$APP_NAME" 
   DEV_MODE=False \
   PORT=8000 \
   DRUPAL_WEBHOOK_TOKEN="$DRUPAL_WEBHOOK_TOKEN" \
+  NAMETAGS_WEBHOOK_TOKEN="$NAMETAGS_WEBHOOK_TOKEN" \
+  ALLOWED_ADMIN_PRINCIPALS="$ALLOWED_ADMIN_PRINCIPALS" \
   TARGET_HOST="$TARGET_HOST" \
   BYPASS_HEADER_NAME="x-wdsoit-bot-bypass" \
   BYPASS_HEADER_VALUE="true"

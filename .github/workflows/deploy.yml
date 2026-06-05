@@ -36,6 +36,8 @@ jobs:
           DATABASE_URL: "sqlite:///:memory:"
           DEV_MODE: "True"
           DRUPAL_WEBHOOK_TOKEN: test_webhook_token
+          NAMETAGS_WEBHOOK_TOKEN: test_webhook_token
+          ALLOWED_ADMIN_PRINCIPALS: bino@princeton.edu
         run: |
           PYTHONPATH=. pytest -v
 
@@ -80,12 +82,24 @@ jobs:
             BYPASS_HEADER_VALUE="true"
           )
           
-          # Inject webhook secret token if defined in GitHub secrets
-          if [ -n "${{ secrets.DRUPAL_WEBHOOK_TOKEN }}" ]; then
-            SETTINGS_ARGS+=("DRUPAL_WEBHOOK_TOKEN=${{ secrets.DRUPAL_WEBHOOK_TOKEN }}")
-          fi
-          
-          az webapp config appsettings set --resource-group "$RG_NAME" --name ${{ vars.AZURE_APP_NAME }} --settings "${SETTINGS_ARGS[@]}"
+           # Inject webhook secret token if defined in GitHub secrets
+           if [ -n "${{ secrets.DRUPAL_WEBHOOK_TOKEN }}" ]; then
+             SETTINGS_ARGS+=("DRUPAL_WEBHOOK_TOKEN=${{ secrets.DRUPAL_WEBHOOK_TOKEN }}")
+           fi
+           
+           if [ -n "${{ secrets.NAMETAGS_WEBHOOK_TOKEN }}" ]; then
+             SETTINGS_ARGS+=("NAMETAGS_WEBHOOK_TOKEN=${{ secrets.NAMETAGS_WEBHOOK_TOKEN }}")
+           fi
+
+           if [ -n "${{ secrets.ALLOWED_ADMIN_PRINCIPALS }}" ]; then
+             SETTINGS_ARGS+=("ALLOWED_ADMIN_PRINCIPALS=${{ secrets.ALLOWED_ADMIN_PRINCIPALS }}")
+           elif [ -n "${{ vars.ALLOWED_ADMIN_PRINCIPALS }}" ]; then
+             SETTINGS_ARGS+=("ALLOWED_ADMIN_PRINCIPALS=${{ vars.ALLOWED_ADMIN_PRINCIPALS }}")
+           else
+             SETTINGS_ARGS+=("ALLOWED_ADMIN_PRINCIPALS=bino@princeton.edu")
+           fi
+           
+           az webapp config appsettings set --resource-group "$RG_NAME" --name ${{ vars.AZURE_APP_NAME }} --settings "${SETTINGS_ARGS[@]}"
 
       - name: Log in to Azure Container Registry
         run: |

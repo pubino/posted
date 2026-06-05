@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, Header, HTTPException, status, Request, Response
+from fastapi import FastAPI, Depends, Header, HTTPException, status, Request, Response, UploadFile, File, Form
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
@@ -8,11 +8,12 @@ import os
 import uuid
 import logging
 import datetime
+import shutil
 
 from backend.config import settings
 from backend.database import get_db, engine, Base
-from backend.models import Presenter
-from backend.schemas import DrupalWebhookPayload, PresenterResponse
+from backend.models import Presenter, Registrant
+from backend.schemas import DrupalWebhookPayload, PresenterResponse, NametagsWebhookPayload, RegistrantResponse
 from backend.download_assets import download_assets
 
 # Setup Logging
@@ -209,3 +210,123 @@ async def drupal_webhook(
         db.commit()
         db.refresh(new_presenter)
         return {"status": "success", "message": "Presenter registered successfully.", "id": new_presenter.id}
+
+
+# --- Nametags & Admin Generator Extension ---
+
+def is_admin_authorized(request: Request) -> bool:
+    # 1. Fetch principal name from Azure Easy Auth header
+    principal_name = request.headers.get("X-MS-CLIENT-PRINCIPAL-NAME")
+    
+    # 2. Local development fallback
+    if not principal_name and os.getenv("ALLOW_LOCAL_DEV_ADMIN") == "true":
+        principal_name = request.headers.get("X-Mock-Admin-Principal", "bino@princeton.edu")
+        
+    if not principal_name:
+        return False
+        
+    # 3. Verify against allowed principals
+    allowed = [email.strip().lower() for email in settings.allowed_admin_principals.split(",")]
+    return principal_name.strip().lower() in allowed
+
+
+@app.post("/api/nametags-webhook")
+async def nametags_webhook(
+    payload: NametagsWebhookPayload,
+    x_drupal_webhook_token: Optional[str] = Header(None, alias="X-Drupal-Webhook-Token"),
+    db: Session = Depends(get_db)
+):
+    if not x_drupal_webhook_token or x_drupal_webhook_token != settings.nametags_webhook_token:
+        logger.error("Nametags webhook auth failed: invalid token header.")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or missing webhook authentication token."
+        )
+
+    if not payload.email_address:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="email_address is required."
+        )
+
+    existing = db.query(Registrant).filter(Registrant.email_address == payload.email_address).first()
+    
+    if existing:
+        logger.info(f"Updating registrant: {payload.email_address}")
+        existing.first_name = payload.first_name or existing.first_name
+        existing.last_name = payload.last_name or existing.last_name
+        existing.home_institution_or_organization = payload.home_institution_or_organization or existing.home_institution_or_organization
+        existing.attendee_status = payload.attendee_status or existing.attendee_status
+        existing.student = payload.student or existing.student
+        existing.t_shirt_size = payload.t_shirt_size or existing.t_shirt_size
+        existing.presenting_poster = payload.presenting_poster or existing.presenting_poster
+        existing.drupal_sid = payload.sid or existing.drupal_sid
+        existing.serial_number = payload.serial or existing.serial_number
+        existing.registered_at = datetime.datetime.utcnow()
+        db.commit()
+        db.refresh(existing)
+        return {"status": "success", "message": "Registrant updated.", "id": existing.id}
+    else:
+        logger.info(f"Creating registrant: {payload.email_address}")
+        new_reg = Registrant(
+            id=str(uuid.uuid4()),
+            email_address=payload.email_address,
+            first_name=payload.first_name,
+            last_name=payload.last_name,
+            home_institution_or_organization=payload.home_institution_or_organization,
+            attendee_status=payload.attendee_status,
+            student=payload.student,
+            t_shirt_size=payload.t_shirt_size,
+            presenting_poster=payload.presenting_poster,
+            drupal_sid=payload.sid,
+            serial_number=payload.serial,
+            registered_at=datetime.datetime.utcnow()
+        )
+        db.add(new_reg)
+        db.commit()
+        db.refresh(new_reg)
+        return {"status": "success", "message": "Registrant registered successfully.", "id": new_reg.id}
+
+
+@app.get("/admin/nametags")
+async def get_admin_nametags(request: Request):
+    if not is_admin_authorized(request):
+        raise HTTPException(status_code=403, detail="Access Forbidden: Unauthorized user principal.")
+    with open("frontend/admin_nametags.html", "r") as f:
+        content = f.read()
+    return HTMLResponse(content=content)
+
+
+@app.get("/api/admin/registrants", response_model=List[RegistrantResponse])
+async def list_admin_registrants(request: Request, db: Session = Depends(get_db)):
+    if not is_admin_authorized(request):
+        raise HTTPException(status_code=403, detail="Access Forbidden: Unauthorized user principal.")
+    registrants = db.query(Registrant).order_by(Registrant.last_name.asc(), Registrant.first_name.asc()).all()
+    return registrants
+
+
+@app.post("/api/admin/upload-logo")
+async def upload_logo(
+    request: Request,
+    logo_type: str = Form(...),
+    file: UploadFile = File(...)
+):
+    if not is_admin_authorized(request):
+        raise HTTPException(status_code=403, detail="Access Forbidden")
+    
+    # Determine extension
+    filename = file.filename
+    ext = os.path.splitext(filename)[1].lower() if filename else ".png"
+    if ext not in (".png", ".jpg", ".jpeg", ".svg"):
+        raise HTTPException(status_code=400, detail="Invalid file type. Only PNG, JPG, or SVG allowed.")
+        
+    os.makedirs("frontend/static/images", exist_ok=True)
+    # We save custom files as badge_primary_custom{ext} or badge_sponsor_custom{ext}
+    target_name = f"badge_{logo_type}_custom{ext}"
+    dest_path = os.path.join("frontend", "static", "images", target_name)
+    
+    # Write file
+    with open(dest_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+        
+    return {"status": "success", "url": f"/static/images/{target_name}"}

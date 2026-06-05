@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Nametag Generator | CAARMS 2026 Admin</title>
+
+  <!-- Typekit, Fonts & FontAwesome -->
+  <link rel="stylesheet" href="https://use.typekit.net/qss7gby.css" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Libre+Franklin:ital,wght@0,100..900;1,100..900&family=Lora:ital,wght@0,400..700;1,400..700&display=swap" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+  <!-- Downloaded Local Stylesheets -->
+  <link rel="stylesheet" href="/static/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="/static/css/base_styles.css" />
+  <link rel="stylesheet" href="/static/css/tiger_styles.css" />
+  <link rel="stylesheet" href="/static/css/align_header.css" />
+  <link rel="stylesheet" href="/static/css/site_title.css" />
+
+  <style>
+    body {
+      font-family: 'Libre Franklin', sans-serif;
+      background-color: #ffffff !important;
+      color: #2b2b2b;
+    }
+    .page-title {
+      font-family: 'Lora', serif;
+      color: #1a1a1a;
+      font-weight: 700;
+      margin-bottom: 2rem;
+      font-size: 2.5rem;
+      border-bottom: none !important;
+    }
+    .admin-container {
+      padding: 3rem 0;
+    }
+    
+    /* Control Box Styles */
+    .control-panel {
+      background: #fdfdfd;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02);
+    }
+    .control-title {
+      font-family: 'Lora', serif;
+      font-weight: 700;
+      font-size: 1.25rem;
+      color: #1a1a1a;
+      margin-bottom: 1rem;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 0.5rem;
+    }
+    
+    /* Tally Grid Box */
+    .tally-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .tally-card {
+      background: #fff;
+      border: 1px solid #eee;
+      border-radius: 4px;
+      padding: 0.75rem;
+      text-align: center;
+    }
+    .tally-card .count {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #f58025;
+    }
+    .tally-card .label {
+      font-size: 0.8rem;
+      color: #666;
+      text-transform: uppercase;
+      margin-top: 0.25rem;
+    }
+
+    /* Action Buttons */
+    .btn-brand-border {
+      border: 1px solid #ccc;
+      color: #333;
+      background-color: transparent;
+      padding: 0.5rem 1.25rem;
+      border-radius: 4px;
+      display: inline-block;
+      text-decoration: none;
+      font-family: 'Libre Franklin', sans-serif;
+      transition: all 0.2s ease-in-out;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .btn-brand-border:hover {
+      border-color: #f58025;
+      color: #f58025;
+      text-decoration: none;
+      background-color: rgba(245, 128, 37, 0.02);
+    }
+
+    .btn-brand-filled {
+      background-color: #f58025;
+      border: 1px solid #f58025;
+      color: #fff;
+      padding: 0.5rem 1.25rem;
+      border-radius: 4px;
+      display: inline-block;
+      text-decoration: none;
+      font-family: 'Libre Franklin', sans-serif;
+      transition: all 0.2s ease-in-out;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-brand-filled:hover {
+      background-color: #d66c1f;
+      border-color: #d66c1f;
+      color: #fff;
+      text-decoration: none;
+    }
+
+    /* Registrant Table */
+    .registrant-table th {
+      background-color: #f8f9fa;
+      font-weight: 600;
+      color: #444;
+    }
+
+    /* Badges Sheet Container - Hidden by default on screen, visible only when printing or in preview */
+    #badges-print-area {
+      display: none;
+    }
+
+    /* CSS for Printing badges */
+    @media print {
+      body {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+        margin: 0;
+        padding: 0;
+      }
+      .dialog-off-canvas-main-canvas,
+      #header,
+      .admin-container,
+      .utility-bar,
+      #badges-controls {
+        display: none !important;
+      }
+      
+      #badges-print-area {
+        display: block !important;
+        width: 100%;
+      }
+      
+      /* Badge Avery layout (8 badges per page, 3" x 4") */
+      .badge-sheet {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        grid-gap: 0.2in;
+        padding: 0.2in;
+        page-break-after: always;
+      }
+      
+      .badge-card {
+        width: 3.5in;
+        height: 2.75in;
+        border: 1px dashed #ccc; /* Cut lines */
+        border-radius: 6px;
+        padding: 0.25in;
+        box-sizing: border-box;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        background-color: #fff;
+      }
+      
+      .badge-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+        height: 0.5in;
+      }
+      
+      .badge-logo-primary {
+        max-height: 0.4in;
+        max-width: 1.2in;
+        object-fit: contain;
+      }
+      
+      .badge-logo-sponsor {
+        max-height: 0.35in;
+        max-width: 1.2in;
+        object-fit: contain;
+      }
+      
+      .badge-content {
+        text-align: center;
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        margin-top: 0.1in;
+      }
+      
+      .badge-name {
+        font-family: 'Lora', serif;
+        font-weight: 700;
+        font-size: 20pt;
+        color: #000;
+        margin-bottom: 2pt;
+        line-height: 1.2;
+      }
+      
+      .badge-affiliation {
+        font-family: 'sofia-pro', sans-serif;
+        font-size: 11pt;
+        color: #555;
+        font-weight: 500;
+        line-height: 1.2;
+        max-height: 0.4in;
+        overflow: hidden;
+      }
+      
+      /* Role Bottom Border Band */
+      .badge-footer-ribbon {
+        height: 0.25in;
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: 'sofia-pro', sans-serif;
+        font-size: 9pt;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        border-radius: 0 0 4px 4px;
+        color: #fff;
+      }
+      
+      /* Role Colors */
+      .role-speaker { background-color: #f58025 !important; }
+      .role-organizer { background-color: #1a1a1a !important; }
+      .role-attendee { background-color: #6c757d !important; }
+    }
+  </style>
+</head>
+<body class="page-node">
+
+  <div class="dialog-off-canvas-main-canvas" data-off-canvas-main-canvas>
+    <div class="page page-container">
+      
+      <!-- HEADER REGION -->
+      <header role="banner" class="header region region-header" id="header">
+        <div class="header-container container">
+          <div class="princeton-branding">
+            <div class="container">
+              <a href="http://www.princeton.edu" class="pu-logo" title="Princeton University">
+                <img src="/static/images/pu-logo.svg" alt="Princeton University" />
+              </a>
+            </div>
+          </div>
+
+          <div class="site-branding">
+            <div class="container">
+              <div class="row align-items-center">
+                <div class="col-auto">
+                  <a href="/" title="Home" rel="home" class="site-logo">
+                    <img class="sizing-custom" src="/static/images/caarms_0.png" alt="Home" style="max-height: 80px;" />
+                  </a>
+                </div>
+                <div class="col">
+                  <div class="site-info">
+                    <div class="site-name">
+                      <a href="/" title="Home">CAARMS 2026</a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- MAIN CONTENT SECTION -->
+      <main id="main-content" class="admin-container container">
+        <div class="row">
+          <div class="col-md-12">
+            
+            <h2 class="page-title">Nametag Generator</h2>
+
+            <!-- LOGO CONFIGURATION & UPLOADERS -->
+            <div class="row">
+              <div class="col-md-6">
+                <div class="control-panel">
+                  <div class="control-title"><i class="fa-solid fa-cloud-arrow-up"></i> Configure Badges Primary Logo</div>
+                  <p class="small text-muted">Upload a custom image (PNG/JPG/SVG) to replace the upper-left CAARMS logo on badges.</p>
+                  <form id="upload-primary-form" class="d-flex align-items-center gap-2">
+                    <input type="file" id="primary-logo-file" class="form-control form-control-sm" accept="image/*" required />
+                    <button type="submit" class="btn-brand-border btn-sm">Upload</button>
+                  </form>
+                  <div id="primary-upload-status" class="small mt-2"></div>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="control-panel">
+                  <div class="control-title"><i class="fa-solid fa-cloud-arrow-up"></i> Configure Badges Sponsor Logo</div>
+                  <p class="small text-muted">Upload a custom image (PNG/JPG/SVG) to replace the lower-right Princeton branding logo.</p>
+                  <form id="upload-sponsor-form" class="d-flex align-items-center gap-2">
+                    <input type="file" id="sponsor-logo-file" class="form-control form-control-sm" accept="image/*" required />
+                    <button type="submit" class="btn-brand-border btn-sm">Upload</button>
+                  </form>
+                  <div id="sponsor-upload-status" class="small mt-2"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- CONTROLS & FILTER BAR -->
+            <div class="control-panel" id="badges-controls">
+              <div class="control-title"><i class="fa-solid fa-sliders"></i> Print Filters & Options</div>
+              
+              <!-- Tally Grid summaries -->
+              <div class="tally-grid">
+                <div class="tally-card">
+                  <div class="count" id="tally-total">0</div>
+                  <div class="label">Total Registrants</div>
+                </div>
+                <div class="tally-card">
+                  <div class="count" id="tally-speakers">0</div>
+                  <div class="label">Speakers</div>
+                </div>
+                <div class="tally-card">
+                  <div class="count" id="tally-organizers">0</div>
+                  <div class="label">Organizers</div>
+                </div>
+                <div class="tally-card">
+                  <div class="count" id="tally-attendees">0</div>
+                  <div class="label">Attendees</div>
+                </div>
+                <div class="tally-card">
+                  <div class="count" id="tally-posters">0</div>
+                  <div class="label">Posters</div>
+                </div>
+              </div>
+
+              <!-- Tally Grid for T-Shirts -->
+              <div class="control-title" style="font-size: 1.1rem; margin-top: 1.5rem;"><i class="fa-solid fa-shirt"></i> T-Shirt Sizes Count</div>
+              <div class="tally-grid" id="tally-tshirts-container">
+                <!-- Size counts will be populated dynamically -->
+              </div>
+
+              <div class="row g-3 mt-3 align-items-end">
+                <div class="col-md-4">
+                  <label class="form-label font-weight-bold">Search Registrants</label>
+                  <input type="text" id="search-input" class="form-control" placeholder="Search by name, email, or organization..." />
+                </div>
+                <div class="col-md-3">
+                  <label class="form-label font-weight-bold">Filter Status/Role</label>
+                  <select id="role-select" class="form-select">
+                    <option value="">All Roles</option>
+                    <option value="Speaker">Speakers</option>
+                    <option value="Organizer">Organizers</option>
+                    <option value="Attendee">Attendees</option>
+                  </select>
+                </div>
+                <div class="col-md-3">
+                  <label class="form-label font-weight-bold">Filter T-Shirt Size</label>
+                  <select id="tshirt-select" class="form-select">
+                    <option value="">All Sizes</option>
+                    <option value="USML">Unisex - Small</option>
+                    <option value="UMED">Unisex - Medium</option>
+                    <option value="ULRG">Unisex - Large</option>
+                    <option value="U1XL">Unisex - XL</option>
+                    <option value="U2XL">Unisex - 2XL</option>
+                    <option value="U3XL">Unisex - 3XL</option>
+                    <option value="NONE">No T-Shirt</option>
+                  </select>
+                </div>
+                <div class="col-md-2">
+                  <button id="print-selected-btn" class="btn-brand-filled w-100"><i class="fa-solid fa-print"></i> Print Selected</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- REGISTRANTS LISTING TABLE -->
+            <div class="control-panel">
+              <div class="control-title"><i class="fa-solid fa-users"></i> Attendee Registrants</div>
+              <div class="table-responsive">
+                <table class="table table-hover registrant-table" id="registrants-table-body">
+                  <thead>
+                    <tr>
+                      <th style="width: 40px;"><input type="checkbox" id="select-all-checkbox" checked /></th>
+                      <th>Name</th>
+                      <th>Email</th>
+                      <th>Affiliation / Institution</th>
+                      <th>Status/Role</th>
+                      <th>Poster?</th>
+                      <th>T-Shirt</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <!-- Populated dynamically -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div style="margin-top: 2rem;">
+              <a href="/" class="btn-brand-border"><i class="fa fa-arrow-left"></i> Back to Posters Portal</a>
+            </div>
+
+          </div>
+        </div>
+      </main>
+
+    </div>
+  </div>
+
+  <!-- PRINT-ONLY AREA: RENDERED DYNAMICALLY BEFORE window.print() -->
+  <div id="badges-print-area"></div>
+
+  <!-- Main JavaScript Logic -->
+  <script>
+    let registrants = [];
+    
+    // Logo URLs (will be overwritten if custom logos are uploaded)
+    let primaryLogoUrl = "/static/images/caarms_0.png";
+    let sponsorLogoUrl = "/static/images/pu-logo.svg";
+
+    document.addEventListener("DOMContentLoaded", () => {
+      fetchRegistrants();
+
+      // Hook events
+      document.getElementById("search-input").addEventListener("input", filterAndRenderTable);
+      document.getElementById("role-select").addEventListener("change", filterAndRenderTable);
+      document.getElementById("tshirt-select").addEventListener("change", filterAndRenderTable);
+      document.getElementById("select-all-checkbox").addEventListener("change", toggleSelectAll);
+      document.getElementById("print-selected-btn").addEventListener("click", printSelectedBadges);
+      
+      // Upload events
+      document.getElementById("upload-primary-form").addEventListener("submit", (e) => uploadLogo(e, "primary"));
+      document.getElementById("upload-sponsor-form").addEventListener("submit", (e) => uploadLogo(e, "sponsor"));
+    });
+
+    async function fetchRegistrants() {
+      try {
+        const response = await fetch("/api/admin/registrants");
+        if (!response.ok) {
+          throw new Error("Failed to load registrants. Verify authentication.");
+        }
+        registrants = await response.json();
+        
+        // Add local select flag to each registrant
+        registrants.forEach(r => r.selected = true);
+
+        calculateTallies();
+        filterAndRenderTable();
+      } catch (err) {
+        console.error("Error fetching registrants:", err);
+        alert("Access Denied or Database error. Please make sure you are logged in via Easy Auth.");
+      }
+    }
+
+    function calculateTallies() {
+      let totals = { total: registrants.length, speakers: 0, organizers: 0, attendees: 0, posters: 0 };
+      let tshirts = { "USML": 0, "UMED": 0, "ULRG": 0, "U1XL": 0, "U2XL": 0, "U3XL": 0, "NONE": 0 };
+
+      registrants.forEach(r => {
+        if (r.attendee_status === "Speaker") totals.speakers++;
+        else if (r.attendee_status === "Organizer") totals.organizers++;
+        else totals.attendees++;
+
+        if (r.presenting_poster === "Yes") totals.posters++;
+
+        if (r.t_shirt_size && tshirts[r.t_shirt_size] !== undefined) {
+          tshirts[r.t_shirt_size]++;
+        }
+      });
+
+      // Update counters
+      document.getElementById("tally-total").innerText = totals.total;
+      document.getElementById("tally-speakers").innerText = totals.speakers;
+      document.getElementById("tally-organizers").innerText = totals.organizers;
+      document.getElementById("tally-attendees").innerText = totals.attendees;
+      document.getElementById("tally-posters").innerText = totals.posters;
+
+      // Update T-Shirt counters
+      const tshContainer = document.getElementById("tally-tshirts-container");
+      const sizeLabels = {
+        "USML": "S",
+        "UMED": "M",
+        "ULRG": "L",
+        "U1XL": "XL",
+        "U2XL": "2XL",
+        "U3XL": "3XL",
+        "NONE": "No Swag"
+      };
+
+      tshContainer.innerHTML = Object.keys(tshirts).map(size => `
+        <div class="tally-card">
+          <div class="count">${tshirts[size]}</div>
+          <div class="label">${sizeLabels[size]}</div>
+        </div>
+      `).join('');
+    }
+
+    function filterAndRenderTable() {
+      const searchVal = document.getElementById("search-input").value.toLowerCase();
+      const roleVal = document.getElementById("role-select").value;
+      const tshirtVal = document.getElementById("tshirt-select").value;
+
+      const filtered = registrants.filter(r => {
+        const name = `${r.first_name || ""} ${r.last_name || ""}`.toLowerCase();
+        const email = (r.email_address || "").toLowerCase();
+        const org = (r.home_institution_or_organization || "").toLowerCase();
+
+        const matchSearch = name.includes(searchVal) || email.includes(searchVal) || org.includes(searchVal);
+        const matchRole = !roleVal || r.attendee_status === roleVal;
+        const matchTshirt = !tshirtVal || r.t_shirt_size === tshirtVal;
+
+        return matchSearch && matchRole && matchTshirt;
+      });
+
+      const tbody = document.querySelector("#registrants-table-body tbody");
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4">No registrants match filters.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map((r, idx) => `
+        <tr>
+          <td>
+            <input type="checkbox" class="row-checkbox" data-id="${r.id}" ${r.selected ? "checked" : ""} />
+          </td>
+          <td><strong>${escapeHtml(r.first_name)} ${escapeHtml(r.last_name)}</strong></td>
+          <td>${escapeHtml(r.email_address)}</td>
+          <td>${escapeHtml(r.home_institution_or_organization || "N/A")}</td>
+          <td><span class="badge ${getRoleBadgeClass(r.attendee_status)}">${r.attendee_status || "Attendee"}</span></td>
+          <td>${r.presenting_poster === "Yes" ? '<span class="text-success"><i class="fa-solid fa-circle-check"></i> Yes</span>' : '<span class="text-muted">No</span>'}</td>
+          <td><code>${r.t_shirt_size || "NONE"}</code></td>
+        </tr>
+      `).join('');
+
+      // Rebind checkboxes
+      document.querySelectorAll(".row-checkbox").forEach(cb => {
+        cb.addEventListener("change", (e) => {
+          const id = e.target.getAttribute("data-id");
+          const reg = registrants.find(r => r.id === id);
+          if (reg) reg.selected = e.target.checked;
+        });
+      });
+    }
+
+    function toggleSelectAll(e) {
+      const checked = e.target.checked;
+      document.querySelectorAll(".row-checkbox").forEach(cb => {
+        cb.checked = checked;
+        const id = cb.getAttribute("data-id");
+        const reg = registrants.find(r => r.id === id);
+        if (reg) reg.selected = checked;
+      });
+    }
+
+    function getRoleBadgeClass(role) {
+      if (role === "Speaker") return "bg-warning text-dark";
+      if (role === "Organizer") return "bg-dark text-white";
+      return "bg-secondary text-white";
+    }
+
+    async function uploadLogo(e, type) {
+      e.preventDefault();
+      const statusEl = document.getElementById(`${type}-upload-status`);
+      const fileInput = document.getElementById(`${type}-logo-file`);
+      
+      statusEl.innerHTML = `<span class="text-muted"><i class="fa-solid fa-spinner fa-spin"></i> Uploading...</span>`;
+
+      const formData = new FormData();
+      formData.append("logo_type", type);
+      formData.append("file", fileInput.files[0]);
+
+      try {
+        const response = await fetch("/api/admin/upload-logo", {
+          method: "POST",
+          body: formData
+        });
+
+        if (!response.ok) {
+          throw new Error("Upload failed. Verify file type and admin privileges.");
+        }
+
+        const data = await response.json();
+        statusEl.innerHTML = `<span class="text-success"><i class="fa-solid fa-circle-check"></i> Success! URL: ${data.url}</span>`;
+        
+        // Update local configuration urls
+        if (type === "primary") {
+          primaryLogoUrl = data.url;
+        } else {
+          sponsorLogoUrl = data.url;
+        }
+      } catch (err) {
+        statusEl.innerHTML = `<span class="text-danger"><i class="fa-solid fa-triangle-exclamation"></i> Error uploading logo.</span>`;
+        console.error(err);
+      }
+    }
+
+    function printSelectedBadges() {
+      const selected = registrants.filter(r => r.selected);
+      if (selected.length === 0) {
+        alert("Please select at least one registrant to print.");
+        return;
+      }
+
+      const printArea = document.getElementById("badges-print-area");
+      printArea.innerHTML = ""; // Clear
+
+      // Group selected into pages of 8 badges
+      const badgesPerPage = 8;
+      for (let i = 0; i < selected.length; i += badgesPerPage) {
+        const pageItems = selected.slice(i, i + badgesPerPage);
+        const sheetDiv = document.createElement("div");
+        sheetDiv.className = "badge-sheet";
+
+        sheetDiv.innerHTML = pageItems.map(r => {
+          const roleClass = getRolePrintClass(r.attendee_status);
+          const roleLabel = r.attendee_status || "Attendee";
+          const affiliation = r.home_institution_or_organization || "";
+
+          return `
+            <div class="badge-card">
+              <div class="badge-header">
+                <img class="badge-logo-primary" src="${primaryLogoUrl}" alt="Conference Logo" />
+                <img class="badge-logo-sponsor" src="${sponsorLogoUrl}" alt="Branding Logo" />
+              </div>
+              <div class="badge-content">
+                <div class="badge-name">${escapeHtml(r.first_name)} ${escapeHtml(r.last_name)}</div>
+                <div class="badge-affiliation">${escapeHtml(affiliation)}</div>
+              </div>
+              <div class="badge-footer-ribbon ${roleClass}">
+                ${roleLabel}
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        printArea.appendChild(sheetDiv);
+      }
+
+      // Trigger browser printing
+      window.print();
+    }
+
+    function getRolePrintClass(role) {
+      if (role === "Speaker") return "role-speaker";
+      if (role === "Organizer") return "role-organizer";
+      return "role-attendee";
+    }
+
+    function escapeHtml(str) {
+      if (!str) return "";
+      return str
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+  </script>
+</body>
+</html>

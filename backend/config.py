@@ -21,6 +21,8 @@ class Settings(BaseSettings):
     
     # Webhook Security
     drupal_webhook_token: str = "secret_drupal_token"
+    nametags_webhook_token: str = "secret_nametags_token"
+    allowed_admin_principals: str = "bino@princeton.edu"
 
     @model_validator(mode="after")
     def validate_urls(self) -> "Settings":
