@@ -1,0 +1,19 @@
+version: "3.8"
+
+services:
+  web:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=sqlite:///./posted.db
+      - DEV_MODE=True
+      - DRUPAL_WEBHOOK_TOKEN=secret_drupal_token
+    volumes:
+      - ./backend:/app/backend
+      - ./frontend:/app/frontend
+      # Mount a local file for database persistence in development
+      - db_data:/app/data
+
+volumes:
+  db_data:

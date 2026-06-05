@@ -1,0 +1,105 @@
+name: Build, Test, and Deploy to Azure
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '**.md'
+      - 'LICENSE'
+      - 'deploy/teardown.sh'
+      - '.github/workflows/teardown.yml'
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Run Python Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Pytest
+        env:
+          DATABASE_URL: "sqlite:///:memory:"
+          DEV_MODE: "True"
+          DRUPAL_WEBHOOK_TOKEN: test_webhook_token
+        run: |
+          PYTHONPATH=. pytest -v
+
+  deploy:
+    name: Build Container & Deploy to Azure
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Log in to Azure
+        uses: azure/login@v1
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Configure Web App Settings (Always On & Persistent Storage)
+        run: |
+          # Explicitly set the active subscription
+          az account set --subscription ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+          RG_NAME=$(az webapp list --query "[?name=='${{ vars.AZURE_APP_NAME }}'].resourceGroup" -o tsv)
+          
+          # Enable Managed Identity container pull and Keep Web App Always On
+          az webapp config set --resource-group "$RG_NAME" --name ${{ vars.AZURE_APP_NAME }} \
+            --generic-configurations '{"acrUseManagedIdentityCreds": true, "alwaysOn": true}'
+          
+          # Declare app environment parameters including free SQLite DB file location
+          SETTINGS_ARGS=(
+            DATABASE_URL="sqlite:////home/posted.db"
+            DEV_MODE="False"
+            WEBSITES_ENABLE_APP_SERVICE_STORAGE="true"
+            TARGET_HOST="https://caarms.princeton.edu"
+            BYPASS_HEADER_NAME="x-wdsoit-bot-bypass"
+            BYPASS_HEADER_VALUE="true"
+          )
+          
+          # Inject webhook secret token if defined in GitHub secrets
+          if [ -n "${{ secrets.DRUPAL_WEBHOOK_TOKEN }}" ]; then
+            SETTINGS_ARGS+=("DRUPAL_WEBHOOK_TOKEN=${{ secrets.DRUPAL_WEBHOOK_TOKEN }}")
+          fi
+          
+          az webapp config appsettings set --resource-group "$RG_NAME" --name ${{ vars.AZURE_APP_NAME }} --settings "${SETTINGS_ARGS[@]}"
+
+      - name: Log in to Azure Container Registry
+        run: |
+          az acr login --name ${{ vars.ACR_NAME }}
+
+      - name: Build and Push Container Image
+        run: |
+          IMAGE_TAG=${{ vars.ACR_NAME }}.azurecr.io/posted:${{ github.sha }}
+          docker build -t $IMAGE_TAG -t ${{ vars.ACR_NAME }}.azurecr.io/posted:latest .
+          docker push $IMAGE_TAG
+          docker push ${{ vars.ACR_NAME }}.azurecr.io/posted:latest
+
+      - name: Deploy Container to Azure Web App
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ vars.AZURE_APP_NAME }}
+          images: ${{ vars.ACR_NAME }}.azurecr.io/posted:${{ github.sha }}

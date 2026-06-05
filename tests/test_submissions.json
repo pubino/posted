@@ -1,0 +1,26 @@
+[
+  {
+    "sid": 201,
+    "serial": 12,
+    "data": {
+      "registrant_name": {"first": "Charlie", "last": "Chaplin"},
+      "email_address": "charlie@example.com",
+      "presenting_poster": "Yes",
+      "poster_title": "Modern Times of Quantum Mechanics",
+      "faculty_adviser_name": "Dr. Einstein",
+      "poster_presentation_abstract": "Abstract details."
+    }
+  },
+  {
+    "sid": 202,
+    "serial": 13,
+    "data": {
+      "registrant_name": {"first": "Oliver", "last": "Twist"},
+      "email_address": "oliver@example.com",
+      "presenting_poster": "No",
+      "poster_title": "Please, Sir, I Want Some More Physics",
+      "faculty_adviser_name": "Dr. Fagin",
+      "poster_presentation_abstract": "Abstract details."
+    }
+  }
+]

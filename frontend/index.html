@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Poster Presenters | CAARMS 2026</title>
+
+  <!-- Google Fonts & FontAwesome -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Libre+Franklin:ital,wght@0,100..900;1,100..900&family=Lora:ital,wght@0,400..700;1,400..700&display=swap" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+  <!-- Downloaded Local Stylesheets -->
+  <link rel="stylesheet" href="/static/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="/static/css/base_styles.css" />
+  <link rel="stylesheet" href="/static/css/tiger_styles.css" />
+  <link rel="stylesheet" href="/static/css/align_header.css" />
+  <link rel="stylesheet" href="/static/css/site_title.css" />
+  <link rel="stylesheet" href="/static/css/sponsorship.css" />
+
+  <!-- MathJax for rendering LaTeX formulas in abstracts -->
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        processEscapes: true
+      },
+      options: {
+        ignoreHtmlClass: 'tex2jax_ignore',
+        processHtmlClass: 'tex2jax_process'
+      }
+    };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+  <style>
+    /* Clean fallback overrides to guarantee perfect matching visual integration */
+    body {
+      font-family: 'Libre Franklin', sans-serif;
+      background-color: #fcfcfc;
+      color: #2b2b2b;
+    }
+    
+    .main-content-section {
+      padding: 3rem 0;
+      min-height: 50vh;
+    }
+    
+    .page-title {
+      font-family: 'Lora', serif;
+      color: #1a1a1a;
+      font-weight: 700;
+      border-bottom: 2px solid #f58025; /* Princeton Orange accent bar */
+      padding-bottom: 0.75rem;
+      margin-bottom: 2.5rem;
+      font-size: 2.5rem;
+    }
+
+    /* Presenter card styling */
+    .presenter-card {
+      background: #ffffff;
+      border: 1px solid #e0e0e0;
+      border-left: 5px solid #f58025; /* Princeton Orange border indicator */
+      border-radius: 6px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
+      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    }
+    
+    .presenter-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+      border-left-color: #d66c1f;
+    }
+    
+    .presenter-name {
+      font-family: 'Lora', serif;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #f58025;
+      margin-top: 0;
+      margin-bottom: 0.5rem;
+    }
+    
+    .poster-title {
+      font-family: 'Libre Franklin', sans-serif;
+      font-weight: 600;
+      font-size: 1.2rem;
+      color: #2b2b2b;
+      margin-bottom: 0.75rem;
+      line-height: 1.4;
+    }
+    
+    .presenter-adviser {
+      font-size: 0.95rem;
+      color: #666;
+      margin-bottom: 1rem;
+      background: #f8f9fa;
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 4px;
+      border: 1px solid #eee;
+    }
+
+    .presenter-adviser strong {
+      color: #444;
+    }
+    
+    .presenter-abstract-title {
+      font-weight: 700;
+      font-size: 0.95rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #555;
+      margin-top: 1rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .presenter-abstract {
+      font-size: 1rem;
+      line-height: 1.6;
+      color: #444;
+      text-align: justify;
+    }
+
+    /* Loading state */
+    .loading-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 5rem 0;
+    }
+    
+    .spinner {
+      border: 4px solid rgba(245, 128, 37, 0.1);
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      border-left-color: #f58025;
+      animation: spin 1s linear infinite;
+      margin-bottom: 1.5rem;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* Empty state */
+    .empty-container {
+      text-align: center;
+      padding: 4rem 2rem;
+      background: #fdfdfd;
+      border: 1px dashed #ccc;
+      border-radius: 8px;
+    }
+    
+    .empty-icon {
+      font-size: 3rem;
+      color: #ccc;
+      margin-bottom: 1rem;
+    }
+
+    /* Menu overrides */
+    .main-menu .nav-item.active > a {
+      color: #f58025 !important;
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body class="page-node content-type-ps-basic-page flavor1 fontset2 btn-v1 menu4 layout-block-padding-medium layout-above-section-spacing-none layout-below-section-spacing-medium">
+
+  <div class="dialog-off-canvas-main-canvas" data-off-canvas-main-canvas>
+    <div class="page page-container">
+      
+      <!-- HEADER REGION (Mimicking caarms.princeton.edu) -->
+      <header role="banner" class="header region region-header" id="header">
+        <h1 class="sr-only sr-site-name">The Official Site for CAARMS 2026 Held this Year at Princeton University - Sunday, June 28 – Wednesday, July 1, 2026</h1>
+        
+        <div class="header-container container">
+          <!-- Princeton Branding Logo -->
+          <div class="princeton-branding">
+            <div class="container">
+              <a href="http://www.princeton.edu" class="pu-logo" title="Princeton University">
+                <img src="/static/images/pu-logo.svg" alt="Princeton University" />
+              </a>
+            </div>
+          </div>
+
+          <!-- Site Logo & Title Slogan Banner -->
+          <div class="site-branding">
+            <div class="container">
+              <div class="row align-items-center">
+                <div class="col-auto">
+                  <a href="https://caarms.princeton.edu/" title="Home" rel="home" class="site-logo" tabindex="-1" aria-hidden="true">
+                    <img class="sizing-custom" src="/static/images/caarms_0.png" alt="Home" style="max-height: 80px;" />
+                  </a>
+                </div>
+                <div class="col">
+                  <div class="site-info with-slogan with-slogan-suffix">
+                    <div class="site-name">
+                      <a href="https://caarms.princeton.edu/" title="Home" rel="home">The Official Site for CAARMS 2026</a>
+                    </div>
+                    <div class="site-slogan">
+                      Held this Year at Princeton University - Sunday, June 28 – Wednesday, July 1, 2026
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Navigation Main Menu -->
+          <nav aria-label="site" class="main-menu">
+            <h2 class="sr-only">Main Menu</h2>
+            <div class="container navbar-expand-lg">
+              <div id="menu-container" class="collapse navbar-collapse show">
+                <ul class="fixed-col-3 menu4-fixed nav navbar-nav main" role="list">
+                  <li class="nav-item">
+                    <a href="https://caarms.princeton.edu/">Conference</a>
+                  </li>
+                  <li class="nav-item">
+                    <a href="https://caarms.princeton.edu/registration">Registration</a>
+                  </li>
+                  <li class="nav-item">
+                    <a href="https://caarms.princeton.edu/agenda">Agenda</a>
+                  </li>
+                  <li class="nav-item active">
+                    <a href="/" class="is-active" aria-current="page">Poster Presenters</a>
+                  </li>
+                  <li class="nav-item">
+                    <a href="https://caarms.princeton.edu/past">Past Events</a>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </nav>
+        </div>
+      </header>
+
+      <!-- MAIN CONTENT SECTION -->
+      <main id="main-content" class="main-content-section">
+        <div class="container">
+          <div class="row">
+            <div class="col-md-10 offset-md-1">
+              
+              <h2 class="page-title">Poster Presenters</h2>
+
+              <!-- Loading Indicator -->
+              <div id="loading-state" class="loading-container">
+                <div class="spinner"></div>
+                <p>Loading poster presentations...</p>
+              </div>
+
+              <!-- Presenters List Target -->
+              <div id="presenters-list" class="tex2jax_process" style="display: none;"></div>
+
+              <!-- Empty State -->
+              <div id="empty-state" class="empty-container" style="display: none;">
+                <div class="empty-icon">
+                  <i class="fa-regular fa-clipboard"></i>
+                </div>
+                <h4>No Poster Presenters Registered Yet</h4>
+                <p>Presenters will appear here automatically upon webform registration.</p>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <!-- FOOTER REGION (Mimicking caarms.princeton.edu) -->
+      <footer role="contentinfo" class="footer region region-footer" id="footer">
+        <h2 class="sr-only">Footer</h2>
+        <div class="container">
+          <div class="region region-footer">
+            <div class="constrained-bkg-constrained-content layout layout--threecol-33-34-33">
+              <div class="layout-inner-container row">
+                
+                <!-- Col 1 -->
+                <div class="col-md-4 text-formatted field field__item">
+                  <p>
+                    <a href="https://orfe.princeton.edu"><strong>Operations Research &amp; Financial Engineering</strong></a><br />
+                    Sherrerd Hall, Charlton Street, Princeton, NJ 08544<br />
+                    609-258-0100
+                  </p>
+                </div>
+
+                <!-- Col 2 -->
+                <div class="col-md-4">
+                  <ul class="field field--name-field-ps-links-list-links field__items" style="list-style: none; padding-left: 0;">
+                    <li class="field__item" style="margin-bottom: 0.5rem;">
+                      <a href="https://caarms.princeton.edu/media-release">Submit Media Release</a>
+                    </li>
+                    <li class="field__item">
+                      <a href="https://caarms.princeton.edu/slide-upload">Upload Slides to Podium</a>
+                    </li>
+                  </ul>
+                </div>
+
+                <!-- Col 3 -->
+                <div class="col-md-4 text-formatted field field__item">
+                  <p>Accessibility accommodation requests must be received at least three weeks prior to event start.</p>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </div>
+      </footer>
+
+    </div>
+  </div>
+
+  <!-- Client-side script to render content -->
+  <script>
+    async function loadPresenters() {
+      const loadingEl = document.getElementById('loading-state');
+      const listEl = document.getElementById('presenters-list');
+      const emptyEl = document.getElementById('empty-state');
+
+      try {
+        const response = await fetch('/api/presenters');
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const presenters = await response.json();
+        
+        loadingEl.style.display = 'none';
+        
+        if (!presenters || presenters.length === 0) {
+          emptyEl.style.display = 'block';
+          listEl.style.display = 'none';
+          return;
+        }
+
+        // Render HTML for each presenter
+        listEl.innerHTML = presenters.map(p => `
+          <div class="presenter-card">
+            <h3 class="presenter-name">${escapeHtml(p.first_name)} ${escapeHtml(p.last_name)}</h3>
+            <h4 class="poster-title">${escapeHtml(p.poster_title)}</h4>
+            <div class="presenter-adviser">
+              <strong>Faculty Adviser:</strong> ${escapeHtml(p.faculty_adviser_name)}
+            </div>
+            <div class="presenter-abstract-title">Abstract</div>
+            <div class="presenter-abstract">${escapeHtml(p.poster_presentation_abstract).replace(/\n/g, '<br>')}</div>
+          </div>
+        `).join('');
+
+        listEl.style.display = 'block';
+        emptyEl.style.display = 'none';
+
+        // Trigger MathJax typesetting if MathJax is loaded
+        if (window.MathJax && typeof window.MathJax.typesetPromise === 'function') {
+          window.MathJax.typesetPromise();
+        }
+      } catch (err) {
+        console.error('Error fetching presenters:', err);
+        loadingEl.style.display = 'none';
+        emptyEl.style.display = 'block';
+        listEl.style.display = 'none';
+        emptyEl.innerHTML = `
+          <div class="empty-icon" style="color: #c62828;">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+          </div>
+          <h4 style="color: #c62828;">Failed to Load Poster Presenters</h4>
+          <p>Please try again later or contact the conference organizers for assistance.</p>
+        `;
+      }
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    // Run on page load
+    document.addEventListener('DOMContentLoaded', loadPresenters);
+  </script>
+</body>
+</html>

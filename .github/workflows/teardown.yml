@@ -1,0 +1,28 @@
+name: Destroy Azure Infrastructure
+
+on:
+  workflow_dispatch:
+
+jobs:
+  teardown:
+    name: Teardown Infrastructure
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Log in to Azure
+        uses: azure/login@v1
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Run Teardown Script
+        run: |
+          chmod +x ./deploy/teardown.sh
+          ./deploy/teardown.sh --yes

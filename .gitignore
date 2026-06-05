@@ -1,0 +1,10 @@
+.env
+.env.deploy
+.env.local
+test_env/
+data/
+*.db
+*.log
+__pycache__/
+.pytest_cache/
+.DS_Store
