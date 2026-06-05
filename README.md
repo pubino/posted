@@ -58,7 +58,8 @@ To automatically stream registrations to the **posted** app:
 2.  Click **Emails/Handlers** -> **Add handler** -> **Remote post**.
 3.  Set the following settings:
     *   **Title**: Poster Presenters Webhook
-    *   **Completed URL**: `https://posters.caarms.princeton.edu/api/drupal-webhook`
+    *   **Completed URL**: `https://posters.caarms.princeton.edu/api/drupal-webhook` (or your local development URL `http://localhost:8000/api/drupal-webhook` during testing).
+    *   **Updated URL**: `https://posters.caarms.princeton.edu/api/drupal-webhook` (this ensures edits and updates on the Drupal side are synchronized in real-time).
 4.  Under the **Advanced** settings section, locate the **Custom options** text area and enter the header authentication token:
     ```yaml
     headers:
