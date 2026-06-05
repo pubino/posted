@@ -185,9 +185,9 @@ def test_rss_feed_generation(client, db_session):
     assert "<channel>" in xml_text
     assert "<title>CAARMS 2026 Poster Presenters</title>" in xml_text
     
-    # Should include visible presenter details
-    assert "Astrophysics (Abby Alpha)" in xml_text
-    assert "Quantum Physics (Zack Zeta)" in xml_text
+    # Should include visible presenter details without presenter name in title
+    assert "<title>Astrophysics</title>" in xml_text
+    assert "<title>Quantum Physics</title>" in xml_text
     
     # Should link to query parameter version of page rather than hash anchor
     assert "/?presenter=2" in xml_text
