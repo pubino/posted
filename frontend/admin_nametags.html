@@ -346,18 +346,12 @@
                 </div>
               </div>
 
-              <!-- Tally Grid for T-Shirts -->
-              <div class="control-title" style="font-size: 1.1rem; margin-top: 1.5rem;"><i class="fa-solid fa-shirt"></i> T-Shirt Sizes Count</div>
-              <div class="tally-grid" id="tally-tshirts-container">
-                <!-- Size counts will be populated dynamically -->
-              </div>
-
               <div class="row g-3 mt-3 align-items-end">
-                <div class="col-md-4">
+                <div class="col-md-5">
                   <label class="form-label font-weight-bold">Search Registrants</label>
                   <input type="text" id="search-input" class="form-control" placeholder="Search by name, email, or organization..." />
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-4">
                   <label class="form-label font-weight-bold">Filter Status/Role</label>
                   <select id="role-select" class="form-select">
                     <option value="">All Roles</option>
@@ -367,19 +361,6 @@
                   </select>
                 </div>
                 <div class="col-md-3">
-                  <label class="form-label font-weight-bold">Filter T-Shirt Size</label>
-                  <select id="tshirt-select" class="form-select">
-                    <option value="">All Sizes</option>
-                    <option value="USML">Unisex - Small</option>
-                    <option value="UMED">Unisex - Medium</option>
-                    <option value="ULRG">Unisex - Large</option>
-                    <option value="U1XL">Unisex - XL</option>
-                    <option value="U2XL">Unisex - 2XL</option>
-                    <option value="U3XL">Unisex - 3XL</option>
-                    <option value="NONE">No T-Shirt</option>
-                  </select>
-                </div>
-                <div class="col-md-2">
                   <button id="print-selected-btn" class="btn-brand-filled w-100"><i class="fa-solid fa-print"></i> Print Selected</button>
                 </div>
               </div>
@@ -398,7 +379,6 @@
                       <th>Affiliation / Institution</th>
                       <th>Status/Role</th>
                       <th>Poster?</th>
-                      <th>T-Shirt</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -436,7 +416,6 @@
       // Hook events
       document.getElementById("search-input").addEventListener("input", filterAndRenderTable);
       document.getElementById("role-select").addEventListener("change", filterAndRenderTable);
-      document.getElementById("tshirt-select").addEventListener("change", filterAndRenderTable);
       document.getElementById("select-all-checkbox").addEventListener("change", toggleSelectAll);
       document.getElementById("print-selected-btn").addEventListener("click", printSelectedBadges);
       
@@ -466,7 +445,6 @@
 
     function calculateTallies() {
       let totals = { total: registrants.length, speakers: 0, organizers: 0, attendees: 0, posters: 0 };
-      let tshirts = { "USML": 0, "UMED": 0, "ULRG": 0, "U1XL": 0, "U2XL": 0, "U3XL": 0, "NONE": 0 };
 
       registrants.forEach(r => {
         if (r.attendee_status === "Speaker") totals.speakers++;
@@ -474,10 +452,6 @@
         else totals.attendees++;
 
         if (r.presenting_poster === "Yes") totals.posters++;
-
-        if (r.t_shirt_size && tshirts[r.t_shirt_size] !== undefined) {
-          tshirts[r.t_shirt_size]++;
-        }
       });
 
       // Update counters
@@ -486,31 +460,11 @@
       document.getElementById("tally-organizers").innerText = totals.organizers;
       document.getElementById("tally-attendees").innerText = totals.attendees;
       document.getElementById("tally-posters").innerText = totals.posters;
-
-      // Update T-Shirt counters
-      const tshContainer = document.getElementById("tally-tshirts-container");
-      const sizeLabels = {
-        "USML": "S",
-        "UMED": "M",
-        "ULRG": "L",
-        "U1XL": "XL",
-        "U2XL": "2XL",
-        "U3XL": "3XL",
-        "NONE": "No Swag"
-      };
-
-      tshContainer.innerHTML = Object.keys(tshirts).map(size => `
-        <div class="tally-card">
-          <div class="count">${tshirts[size]}</div>
-          <div class="label">${sizeLabels[size]}</div>
-        </div>
-      `).join('');
     }
 
     function filterAndRenderTable() {
       const searchVal = document.getElementById("search-input").value.toLowerCase();
       const roleVal = document.getElementById("role-select").value;
-      const tshirtVal = document.getElementById("tshirt-select").value;
 
       const filtered = registrants.filter(r => {
         const name = `${r.first_name || ""} ${r.last_name || ""}`.toLowerCase();
@@ -519,14 +473,13 @@
 
         const matchSearch = name.includes(searchVal) || email.includes(searchVal) || org.includes(searchVal);
         const matchRole = !roleVal || r.attendee_status === roleVal;
-        const matchTshirt = !tshirtVal || r.t_shirt_size === tshirtVal;
 
-        return matchSearch && matchRole && matchTshirt;
+        return matchSearch && matchRole;
       });
 
       const tbody = document.querySelector("#registrants-table-body tbody");
       if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4">No registrants match filters.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-4">No registrants match filters.</td></tr>`;
         return;
       }
 
@@ -540,7 +493,6 @@
           <td>${escapeHtml(r.home_institution_or_organization || "N/A")}</td>
           <td><span class="badge ${getRoleBadgeClass(r.attendee_status)}">${r.attendee_status || "Attendee"}</span></td>
           <td>${r.presenting_poster === "Yes" ? '<span class="text-success"><i class="fa-solid fa-circle-check"></i> Yes</span>' : '<span class="text-muted">No</span>'}</td>
-          <td><code>${r.t_shirt_size || "NONE"}</code></td>
         </tr>
       `).join('');
 

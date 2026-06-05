@@ -104,7 +104,6 @@ Used to populate the complete attendee list for badge compilation and print shee
     *   `home_institution_or_organization`
     *   `attendee_status` (e.g. Speaker, Attendee, Organizer)
     *   `student` (e.g. Yes/No)
-    *   `t_shirt_size`
     *   `presenting_poster`
 
 ---
