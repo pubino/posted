@@ -68,9 +68,9 @@ def test_nametags_webhook_ingest_and_upsert(client, db_session):
     assert reg.attendee_status == "Speaker"
 
 def test_admin_auth_forbidden(client):
-    # Missing principal headers
-    response = client.get("/admin/nametags")
-    assert response.status_code == status.HTTP_403_FORBIDDEN
+    # Missing principal headers should redirect to login
+    response = client.get("/admin/nametags", follow_redirects=False)
+    assert response.status_code == status.HTTP_307_TEMPORARY_REDIRECT
 
     response = client.get("/api/admin/registrants")
     assert response.status_code == status.HTTP_403_FORBIDDEN

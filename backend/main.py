@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Depends, Header, HTTPException, status, Request, Response, UploadFile, File, Form
-from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
+from fastapi.responses import HTMLResponse, JSONResponse, FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 from contextlib import asynccontextmanager
@@ -291,6 +291,9 @@ async def nametags_webhook(
 @app.get("/admin/nametags")
 async def get_admin_nametags(request: Request):
     if not is_admin_authorized(request):
+        principal_name = request.headers.get("X-MS-CLIENT-PRINCIPAL-NAME")
+        if not principal_name and os.getenv("ALLOW_LOCAL_DEV_ADMIN") != "true":
+            return RedirectResponse(url="/.auth/login/aad?post_login_redirect_uri=/admin/nametags")
         raise HTTPException(status_code=403, detail="Access Forbidden: Unauthorized user principal.")
     with open("frontend/admin_nametags.html", "r") as f:
         content = f.read()
