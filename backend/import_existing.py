@@ -11,34 +11,71 @@ from backend.database import SessionLocal, Base, engine
 from backend.models import Presenter
 from backend.schemas import DrupalWebhookPayload
 
-def import_submissions(file_path: str):
-    if not os.path.exists(file_path):
-        print(f"Error: File '{file_path}' does not exist.")
-        sys.exit(1)
-        
-    try:
-        with open(file_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-    except Exception as e:
-        print(f"Error reading or parsing JSON file: {e}")
-        sys.exit(1)
+def import_submissions(path: str):
+    import tarfile
+    import glob
 
-    # Normalize data: handles list format or dictionary-of-submissions format
     records = []
-    if isinstance(data, dict):
-        # Check if the keys represent submission IDs
-        first_key = next(iter(data.keys())) if data else None
-        if first_key and (first_key.isdigit() or len(first_key) > 30):
-            records = list(data.values())
-        else:
-            records = [data]
-    elif isinstance(data, list):
-        records = data
-    else:
-        print("Error: Unsupported JSON root format (must be list or dict of submissions).")
-        sys.exit(1)
 
-    print(f"Found {len(records)} submissions in file. Commencing import...")
+    # Check if the path is a tar.gz / tgz archive file
+    if path.endswith(".tar.gz") or path.endswith(".tgz"):
+        print(f"Detected tarball archive: {path}. Extracting and parsing JSON files in memory...")
+        try:
+            with tarfile.open(path, "r:gz") as tar:
+                for member in tar.getmembers():
+                    if member.isfile() and member.name.endswith(".json"):
+                        f = tar.extractfile(member)
+                        if f:
+                            try:
+                                content = json.loads(f.read().decode("utf-8"))
+                                records.append(content)
+                            except Exception as e:
+                                print(f"Warning: Failed to parse JSON file '{member.name}' in tarball: {e}")
+        except Exception as e:
+            print(f"Error reading tarball archive: {e}")
+            sys.exit(1)
+
+    # Check if the path is a directory containing individual JSON files
+    elif os.path.isdir(path):
+        print(f"Detected directory: {path}. Scanning for JSON files recursively...")
+        json_pattern = os.path.join(path, "**", "*.json")
+        json_files = glob.glob(json_pattern, recursive=True)
+        print(f"Found {len(json_files)} JSON files in directory.")
+        for file_path in json_files:
+            try:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    content = json.load(f)
+                    records.append(content)
+            except Exception as e:
+                print(f"Warning: Failed to parse JSON file '{file_path}': {e}")
+
+    # Otherwise assume it is a single combined JSON file
+    else:
+        if not os.path.exists(path):
+            print(f"Error: Path '{path}' does not exist.")
+            sys.exit(1)
+        print(f"Assuming single JSON file: {path}")
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            
+            # Normalize data: handles list format or dictionary-of-submissions format
+            if isinstance(data, dict):
+                first_key = next(iter(data.keys())) if data else None
+                if first_key and (first_key.isdigit() or len(first_key) > 30):
+                    records = list(data.values())
+                else:
+                    records = [data]
+            elif isinstance(data, list):
+                records = data
+            else:
+                print("Error: Unsupported JSON root format (must be list or dict of submissions).")
+                sys.exit(1)
+        except Exception as e:
+            print(f"Error reading or parsing JSON file: {e}")
+            sys.exit(1)
+
+    print(f"Found {len(records)} submissions in data source. Commencing import...")
 
     # Ensure tables exist
     Base.metadata.create_all(bind=engine)
