@@ -101,18 +101,17 @@ async def get_rss_feed(request: Request, db: Session = Depends(get_db)):
         title_str = p.poster_title or "Untitled Presentation"
         ET.SubElement(item, "title").text = f"{title_str} ({name_str})"
         
-        # Link back to presenter details on page
-        ET.SubElement(item, "link").text = f"{base_url}/#presenter-{p.id}"
+        # Link back to specific presenter details on page
+        ET.SubElement(item, "link").text = f"{base_url}/?presenter={p.id}"
         ET.SubElement(item, "guid", isPermaLink="false").text = p.id
         
         # PubDate
         pub_dt = p.registered_at.replace(tzinfo=timezone.utc) if p.registered_at else now
         ET.SubElement(item, "pubDate").text = email.utils.format_datetime(pub_dt)
         
-        # Description containing full details (safe XML formatting)
+        # Description containing presenter name and faculty adviser with forced line break
         adviser = p.faculty_adviser_name or "N/A"
-        abstract = p.poster_presentation_abstract or ""
-        desc_content = f"Presenter: {name_str}\nFaculty Adviser: {adviser}\n\nAbstract:\n{abstract}"
+        desc_content = f"Presenter: {name_str}<br/>\nFaculty Adviser: {adviser}"
         ET.SubElement(item, "description").text = desc_content
 
     xml_data = ET.tostring(rss, encoding="utf-8", xml_declaration=True)

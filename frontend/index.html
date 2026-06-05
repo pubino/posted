@@ -210,32 +210,6 @@
               </div>
             </div>
           </div>
-
-          <!-- Navigation Main Menu -->
-          <nav aria-label="site" class="main-menu">
-            <h2 class="sr-only">Main Menu</h2>
-            <div class="container navbar-expand-lg">
-              <div id="menu-container" class="collapse navbar-collapse show">
-                <ul class="fixed-col-3 menu4-fixed nav navbar-nav main" role="list">
-                  <li class="nav-item">
-                    <a href="https://caarms.princeton.edu/">Conference</a>
-                  </li>
-                  <li class="nav-item">
-                    <a href="https://caarms.princeton.edu/registration">Registration</a>
-                  </li>
-                  <li class="nav-item">
-                    <a href="https://caarms.princeton.edu/agenda">Agenda</a>
-                  </li>
-                  <li class="nav-item active">
-                    <a href="/" class="is-active" aria-current="page">Poster Presenters</a>
-                  </li>
-                  <li class="nav-item">
-                    <a href="https://caarms.princeton.edu/past">Past Events</a>
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </nav>
         </div>
       </header>
 
@@ -326,7 +300,7 @@
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         
-        const presenters = await response.json();
+        let presenters = await response.json();
         
         loadingEl.style.display = 'none';
         
@@ -336,9 +310,42 @@
           return;
         }
 
+        // Check if we should display only a specific presenter
+        const urlParams = new URLSearchParams(window.location.search);
+        const presenterId = urlParams.get('presenter');
+        
+        let backButtonHtml = '';
+        if (presenterId) {
+          presenters = presenters.filter(p => p.id === presenterId);
+          if (presenters.length === 0) {
+            emptyEl.style.display = 'block';
+            emptyEl.innerHTML = `
+              <div class="empty-icon" style="color: #c62828;">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+              </div>
+              <h4 style="color: #c62828;">Presenter Not Found</h4>
+              <p>The requested presenter could not be located or has been deactivated.</p>
+              <div style="margin-top: 1.5rem;">
+                <a href="https://caarms.princeton.edu/poster-presenters" class="btn btn-primary" style="background-color: #f58025; border-color: #f58025; font-family: 'Libre Franklin', sans-serif; color: #fff; text-decoration: none; padding: 0.5rem 1.25rem; border-radius: 4px; display: inline-block;">
+                  <i class="fa fa-arrow-left" aria-hidden="true" style="margin-right: 0.5rem;"></i> Back to Poster Presenters
+                </a>
+              </div>
+            `;
+            listEl.style.display = 'none';
+            return;
+          }
+          backButtonHtml = `
+            <div style="margin-bottom: 2.5rem;">
+              <a href="https://caarms.princeton.edu/poster-presenters" class="btn btn-primary" style="background-color: #f58025; border-color: #f58025; font-family: 'Libre Franklin', sans-serif; color: #fff; text-decoration: none; padding: 0.5rem 1.25rem; border-radius: 4px; display: inline-block;">
+                <i class="fa fa-arrow-left" aria-hidden="true" style="margin-right: 0.5rem;"></i> Back to Poster Presenters
+              </a>
+            </div>
+          `;
+        }
+
         // Render HTML for each presenter
-        listEl.innerHTML = presenters.map(p => `
-          <div class="presenter-card">
+        listEl.innerHTML = backButtonHtml + presenters.map(p => `
+          <div class="presenter-card" id="presenter-${p.id}">
             <h3 class="presenter-name">${escapeHtml(p.first_name)} ${escapeHtml(p.last_name)}</h3>
             <h4 class="poster-title">${escapeHtml(p.poster_title)}</h4>
             <div class="presenter-adviser">

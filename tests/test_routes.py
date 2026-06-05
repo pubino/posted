@@ -189,6 +189,17 @@ def test_rss_feed_generation(client, db_session):
     assert "Astrophysics (Abby Alpha)" in xml_text
     assert "Quantum Physics (Zack Zeta)" in xml_text
     
+    # Should link to query parameter version of page rather than hash anchor
+    assert "/?presenter=2" in xml_text
+    assert "/?presenter=1" in xml_text
+    
+    # Description should contain the forced line break before Faculty Adviser
+    assert "Presenter: Abby Alpha&lt;br/&gt;\nFaculty Adviser: Adviser A" in xml_text
+    
+    # Should NOT contain the abstracts anywhere in the RSS feed
+    assert "Abstract A" not in xml_text
+    assert "Abstract Z" not in xml_text
+    
     # Should NOT include invisible presenter details
     assert "Hidden Physics" not in xml_text
     
