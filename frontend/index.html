@@ -8,6 +8,9 @@
   <!-- Google Fonts & FontAwesome -->
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Libre+Franklin:ital,wght@0,100..900;1,100..900&family=Lora:ital,wght@0,400..700;1,400..700&display=swap" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="stylesheet" href="https://use.typekit.net/ozr7oya.css" />
+  <link rel="stylesheet" href="https://use.typekit.net/xxx7asp.css" />
+  <link rel="stylesheet" href="https://use.typekit.net/bok5fgz.css" />
 
   <!-- Downloaded Local Stylesheets -->
   <link rel="stylesheet" href="/static/css/bootstrap.min.css" />
@@ -49,8 +52,6 @@
       font-family: 'Lora', serif;
       color: #1a1a1a;
       font-weight: 700;
-      border-bottom: 2px solid #f58025; /* Princeton Orange accent bar */
-      padding-bottom: 0.75rem;
       margin-bottom: 2.5rem;
       font-size: 2.5rem;
     }
@@ -67,11 +68,7 @@
       transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
     }
     
-    .presenter-card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
-      border-left-color: #d66c1f;
-    }
+
     
     .presenter-name {
       font-family: 'Lora', serif;
@@ -92,6 +89,7 @@
     }
     
     .presenter-adviser {
+      font-family: 'sofia-pro', sans-serif;
       font-size: 0.95rem;
       color: #666;
       margin-bottom: 1rem;
@@ -117,6 +115,7 @@
     }
 
     .presenter-abstract {
+      font-family: 'sofia-pro', sans-serif;
       font-size: 1rem;
       line-height: 1.6;
       color: #444;
@@ -176,7 +175,7 @@
       
       <!-- HEADER REGION (Mimicking caarms.princeton.edu) -->
       <header role="banner" class="header region region-header" id="header">
-        <h1 class="sr-only sr-site-name">The Official Site for CAARMS 2026 Held this Year at Princeton University - Sunday, June 28 – Wednesday, July 1, 2026</h1>
+        <h1 class="sr-only sr-site-name">CAARMS 2026</h1>
         
         <div class="header-container container">
           <!-- Princeton Branding Logo -->
@@ -198,12 +197,9 @@
                   </a>
                 </div>
                 <div class="col">
-                  <div class="site-info with-slogan with-slogan-suffix">
+                  <div class="site-info">
                     <div class="site-name">
-                      <a href="https://caarms.princeton.edu/" title="Home" rel="home">The Official Site for CAARMS 2026</a>
-                    </div>
-                    <div class="site-slogan">
-                      Held this Year at Princeton University - Sunday, June 28 – Wednesday, July 1, 2026
+                      <a href="https://caarms.princeton.edu/" title="Home" rel="home">CAARMS 2026</a>
                     </div>
                   </div>
                 </div>
@@ -243,46 +239,6 @@
           </div>
         </div>
       </main>
-
-      <!-- FOOTER REGION (Mimicking caarms.princeton.edu) -->
-      <footer role="contentinfo" class="footer region region-footer" id="footer">
-        <h2 class="sr-only">Footer</h2>
-        <div class="container">
-          <div class="region region-footer">
-            <div class="constrained-bkg-constrained-content layout layout--threecol-33-34-33">
-              <div class="layout-inner-container row">
-                
-                <!-- Col 1 -->
-                <div class="col-md-4 text-formatted field field__item">
-                  <p>
-                    <a href="https://orfe.princeton.edu"><strong>Operations Research &amp; Financial Engineering</strong></a><br />
-                    Sherrerd Hall, Charlton Street, Princeton, NJ 08544<br />
-                    609-258-0100
-                  </p>
-                </div>
-
-                <!-- Col 2 -->
-                <div class="col-md-4">
-                  <ul class="field field--name-field-ps-links-list-links field__items" style="list-style: none; padding-left: 0;">
-                    <li class="field__item" style="margin-bottom: 0.5rem;">
-                      <a href="https://caarms.princeton.edu/media-release">Submit Media Release</a>
-                    </li>
-                    <li class="field__item">
-                      <a href="https://caarms.princeton.edu/slide-upload">Upload Slides to Podium</a>
-                    </li>
-                  </ul>
-                </div>
-
-                <!-- Col 3 -->
-                <div class="col-md-4 text-formatted field field__item">
-                  <p>Accessibility accommodation requests must be received at least three weeks prior to event start.</p>
-                </div>
-
-              </div>
-            </div>
-          </div>
-        </div>
-      </footer>
 
     </div>
   </div>
@@ -327,7 +283,7 @@
               <p>The requested presenter could not be located or has been deactivated.</p>
               <div style="margin-top: 1.5rem;">
                 <a href="https://caarms.princeton.edu/poster-presenters" class="btn btn-primary" style="background-color: #f58025; border-color: #f58025; font-family: 'Libre Franklin', sans-serif; color: #fff; text-decoration: none; padding: 0.5rem 1.25rem; border-radius: 4px; display: inline-block;">
-                  <i class="fa fa-arrow-left" aria-hidden="true" style="margin-right: 0.5rem;"></i> Back to Poster Presenters
+                  <i class="fa fa-arrow-left" aria-hidden="true" style="margin-right: 0.5rem;"></i> Back to All Posters
                 </a>
               </div>
             `;
@@ -337,7 +293,7 @@
           backButtonHtml = `
             <div style="margin-bottom: 2.5rem;">
               <a href="https://caarms.princeton.edu/poster-presenters" class="btn btn-primary" style="background-color: #f58025; border-color: #f58025; font-family: 'Libre Franklin', sans-serif; color: #fff; text-decoration: none; padding: 0.5rem 1.25rem; border-radius: 4px; display: inline-block;">
-                <i class="fa fa-arrow-left" aria-hidden="true" style="margin-right: 0.5rem;"></i> Back to Poster Presenters
+                <i class="fa fa-arrow-left" aria-hidden="true" style="margin-right: 0.5rem;"></i> Back to All Posters
               </a>
             </div>
           `;
@@ -351,8 +307,7 @@
             <div class="presenter-adviser">
               <strong>Faculty Adviser:</strong> ${escapeHtml(p.faculty_adviser_name)}
             </div>
-            <div class="presenter-abstract-title">Abstract</div>
-            <div class="presenter-abstract">${escapeHtml(p.poster_presentation_abstract).replace(/\n/g, '<br>')}</div>
+            <div class="presenter-abstract"><strong>Abstract:</strong> ${escapeHtml(p.poster_presentation_abstract).replace(/\n/g, '<br>')}</div>
           </div>
         `).join('');
 

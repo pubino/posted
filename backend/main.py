@@ -97,9 +97,8 @@ async def get_rss_feed(request: Request, db: Session = Depends(get_db)):
         item = ET.SubElement(channel, "item")
         
         # Title of item
-        name_str = f"{p.first_name} {p.last_name}" if (p.first_name or p.last_name) else "Unknown Presenter"
         title_str = p.poster_title or "Untitled Presentation"
-        ET.SubElement(item, "title").text = f"{title_str} ({name_str})"
+        ET.SubElement(item, "title").text = title_str
         
         # Link back to specific presenter details on page
         ET.SubElement(item, "link").text = f"{base_url}/?presenter={p.id}"
@@ -110,6 +109,7 @@ async def get_rss_feed(request: Request, db: Session = Depends(get_db)):
         ET.SubElement(item, "pubDate").text = email.utils.format_datetime(pub_dt)
         
         # Description containing presenter name and faculty adviser with forced line break
+        name_str = f"{p.first_name} {p.last_name}" if (p.first_name or p.last_name) else "Unknown Presenter"
         adviser = p.faculty_adviser_name or "N/A"
         desc_content = f"Presenter: {name_str}<br/>\nFaculty Adviser: {adviser}"
         ET.SubElement(item, "description").text = desc_content
