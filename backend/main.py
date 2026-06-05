@@ -111,7 +111,7 @@ async def get_rss_feed(request: Request, db: Session = Depends(get_db)):
         # Description containing presenter name and faculty adviser with forced line break
         name_str = f"{p.first_name} {p.last_name}" if (p.first_name or p.last_name) else "Unknown Presenter"
         adviser = p.faculty_adviser_name or "N/A"
-        desc_content = f"Presenter: {name_str}<br/>\nFaculty Adviser: {adviser}"
+        desc_content = f"<strong>Presenter:</strong> {name_str}<br/>\n<strong>Faculty Adviser:</strong> {adviser}"
         ET.SubElement(item, "description").text = desc_content
 
     xml_data = ET.tostring(rss, encoding="utf-8", xml_declaration=True)
