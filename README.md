@@ -12,6 +12,16 @@ A lightweight Python (FastAPI) web portal that collects and displays poster pres
 *   **Webform Remote Post Webhook**: Accepts webform submissions directly from Drupal 10, validating integrity with a custom header secret token.
 *   **Bulk Import Utility**: Built-in CLI command tool imports pre-existing submissions exported from Drupal in JSON/CSV.
 *   **Secret-less GitOps**: Deploys via GitHub Actions utilizing Azure Active Directory OIDC Federated Credentials and App Service system-assigned Managed Identities.
+*   **Dynamic RSS Feed**: Produces and serves standard RSS 2.0 XML feeds at `/feed.xml` and `/rss.xml` containing visible presenters, ordered alphabetically by last name.
+
+---
+
+## RSS Feed Syndication
+
+To syndicate poster presentations to external department sites or widgets, consume one of the public endpoints:
+*   **RSS URL**: `https://posters.caarms.princeton.edu/feed.xml` (or `/rss.xml`)
+*   **Ordering**: Alphabetical by presenter's last name.
+*   **Content**: Each `<item>` contains the poster title, permalink anchor (e.g. `/#presenter-uuid`), registration date, and a description containing the presenter name, faculty adviser, and full abstract.
 
 ---
 
