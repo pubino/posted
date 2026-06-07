@@ -240,6 +240,9 @@ class RoomCreate(BaseModel):
 class RoomUpdate(BaseModel):
     held_by: Optional[str] = None
     comments: Optional[str] = None
+    name: Optional[str] = None
+    capacity: Optional[int] = None
+    room_gender: Optional[str] = None
 
 
 class RoomAssignmentPayload(BaseModel):

@@ -560,7 +560,7 @@
         <div class="row">
           <div class="col-md-12">
             
-            <h2 class="page-title">Lodging Management</h2>
+            <h2 class="page-title">Lodging Planner</h2>
 
             <!-- TALLY stats boxes -->
             <div class="tally-grid">
@@ -708,6 +708,38 @@
       
       <form id="room-details-form">
         <input type="hidden" id="details-room-id" />
+        
+        <!-- Editable room config fields for unoccupied rooms -->
+        <div id="details-unoccupied-fields" style="display: none; border-bottom: 1px dashed #eee; padding-bottom: 1rem; margin-bottom: 1rem;">
+          <div class="form-group">
+            <label for="details-room-name-input">Room Name</label>
+            <input type="text" id="details-room-name-input" class="form-control" />
+          </div>
+          <div class="row">
+            <div class="col-md-6 form-group">
+              <label for="details-capacity-input">Capacity</label>
+              <input type="number" id="details-capacity-input" class="form-control" min="1" />
+            </div>
+            <div class="col-md-6 form-group">
+              <label for="details-gender-input">Gender Constraint</label>
+              <select id="details-gender-input" class="form-control">
+                <option value="Any">Any Gender</option>
+                <option value="Man">Man Only</option>
+                <option value="Woman">Woman Only</option>
+                <option value="Non-binary">Non-binary Only</option>
+                <option value="Mixed">Mixed-Gender</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Read-only info fields for occupied rooms -->
+        <div id="details-occupied-info" style="display: none; margin-bottom: 1.5rem; padding: 0.75rem 1rem; background-color: #f8f9fa; border-radius: 6px; border-left: 4px solid #f58025; font-size: 0.85rem; color: #555;">
+          <div class="mb-1"><strong>Capacity:</strong> <span id="details-capacity-info">2</span></div>
+          <div><strong>Gender Constraint:</strong> <span id="details-gender-info">Any</span></div>
+          <div style="font-style: italic; margin-top: 0.5rem; font-size: 0.75rem; color: #888;">(Name, capacity, and gender constraint cannot be edited while the room is occupied)</div>
+        </div>
+
         <div class="form-group">
           <label for="details-held-by">Held By (Optional)</label>
           <input type="text" id="details-held-by" class="form-control" placeholder="e.g. John Smith, Temporary Booking Name" />
@@ -996,7 +1028,7 @@
                 </div>
               </div>
               <div class="room-actions">
-                <button class="unassign-btn mr-2" onclick="openRoomDetailsModal('${room.id}', '${escapeHtml(room.name)}', '${escapeHtml(room.held_by || "")}', '${escapeHtml(room.comments || "")}')" title="Room Details & Notes">
+                <button class="unassign-btn mr-2" onclick="openRoomDetailsModal('${room.id}', '${escapeHtml(room.name)}', '${escapeHtml(room.held_by || "")}', '${escapeHtml(room.comments || "")}', ${room.capacity}, '${escapeHtml(room.room_gender)}', ${occupants.length === 0})" title="Room Details & Notes">
                   <i class="fa-solid fa-circle-info"></i>
                 </button>
                 <button class="room-delete-btn" onclick="deleteRoom('${room.id}', '${escapeHtml(room.name)}')" title="Delete room and unassign attendees">
@@ -1367,11 +1399,37 @@
       activeSelectRoomId = null;
     }
 
-    function openRoomDetailsModal(roomId, roomName, heldBy, comments) {
+    function openRoomDetailsModal(roomId, roomName, heldBy, comments, capacity, roomGender, isUnoccupied) {
       document.getElementById("details-room-id").value = roomId;
       document.getElementById("details-room-name").innerText = roomName;
       document.getElementById("details-held-by").value = heldBy;
       document.getElementById("details-comments").value = comments;
+
+      const unoccupiedFields = document.getElementById("details-unoccupied-fields");
+      const occupiedInfo = document.getElementById("details-occupied-info");
+
+      if (isUnoccupied) {
+        unoccupiedFields.style.display = "block";
+        occupiedInfo.style.display = "none";
+        
+        document.getElementById("details-room-name-input").value = roomName;
+        document.getElementById("details-capacity-input").value = capacity;
+        document.getElementById("details-gender-input").value = roomGender;
+      } else {
+        unoccupiedFields.style.display = "none";
+        occupiedInfo.style.display = "block";
+        
+        document.getElementById("details-capacity-info").innerText = capacity;
+        
+        let genderText = "Any Gender";
+        if (roomGender === "Woman") genderText = "Woman Only";
+        else if (roomGender === "Man") genderText = "Man Only";
+        else if (roomGender === "Non-binary") genderText = "Non-binary Only";
+        else if (roomGender === "Mixed") genderText = "Mixed-Gender";
+        
+        document.getElementById("details-gender-info").innerText = genderText;
+      }
+
       document.getElementById("room-details-modal").classList.add("show");
     }
 
@@ -1381,16 +1439,35 @@
       const heldBy = document.getElementById("details-held-by").value.trim();
       const comments = document.getElementById("details-comments").value.trim();
 
+      const unoccupiedFieldsVisible = document.getElementById("details-unoccupied-fields").style.display === "block";
+
+      const payload = {
+        held_by: heldBy || null,
+        comments: comments || null
+      };
+
+      if (unoccupiedFieldsVisible) {
+        payload.name = document.getElementById("details-room-name-input").value.trim();
+        payload.capacity = parseInt(document.getElementById("details-capacity-input").value, 10);
+        payload.room_gender = document.getElementById("details-gender-input").value;
+
+        if (!payload.name) {
+          alert("Room name cannot be empty.");
+          return;
+        }
+        if (isNaN(payload.capacity) || payload.capacity <= 0) {
+          alert("Capacity must be greater than zero.");
+          return;
+        }
+      }
+
       try {
         const response = await fetch(`/api/admin/rooms/${roomId}`, {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json"
           },
-          body: JSON.stringify({
-            held_by: heldBy || null,
-            comments: comments || null
-          })
+          body: JSON.stringify(payload)
         });
 
         if (!response.ok) {

@@ -214,7 +214,9 @@ def test_room_details_update(client, db_session):
 
     # Insert room
     room = Room(id="room-details", name="Details Room", capacity=2, room_gender="Any")
-    db_session.add(room)
+    room_occupied = Room(id="room-occupied", name="Occupied Room", capacity=2, room_gender="Any")
+    reg = Registrant(id="reg-occ", email_address="occ@example.com", lodging="Yes", room_id="room-occupied")
+    db_session.add_all([room, room_occupied, reg])
     db_session.commit()
 
     # 1. Update Room details (Unauthorized)
@@ -224,19 +226,53 @@ def test_room_details_update(client, db_session):
     )
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
-    # 2. Update Room details (Authorized)
+    # 2. Update Room details (Authorized - update all fields of unoccupied room)
     response = client.patch(
         "/api/admin/rooms/room-details",
-        json={"held_by": "Dr. Massey", "comments": "Temporary block"},
+        json={
+            "held_by": "Dr. Massey",
+            "comments": "Temporary block",
+            "name": "Updated Details Room",
+            "capacity": 3,
+            "room_gender": "Woman"
+        },
         headers=headers
     )
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
     assert data["held_by"] == "Dr. Massey"
     assert data["comments"] == "Temporary block"
+    assert data["name"] == "Updated Details Room"
+    assert data["capacity"] == 3
+    assert data["room_gender"] == "Woman"
 
     # Verify db state
     db_session.expire_all()
     room_db = db_session.query(Room).filter(Room.id == "room-details").first()
     assert room_db.held_by == "Dr. Massey"
     assert room_db.comments == "Temporary block"
+    assert room_db.name == "Updated Details Room"
+    assert room_db.capacity == 3
+    assert room_db.room_gender == "Woman"
+
+    # 3. Try to update name/capacity/gender of occupied room (should fail)
+    response = client.patch(
+        "/api/admin/rooms/room-occupied",
+        json={
+            "name": "New Name",
+            "capacity": 4,
+            "room_gender": "Man"
+        },
+        headers=headers
+    )
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert "Cannot edit" in response.json()["detail"]
+
+    # 4. Try to update name of unoccupied room to an existing room name (should fail)
+    response = client.patch(
+        "/api/admin/rooms/room-details",
+        json={"name": "Occupied Room"},
+        headers=headers
+    )
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert "already exists" in response.json()["detail"]

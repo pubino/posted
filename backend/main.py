@@ -428,8 +428,43 @@ async def update_admin_room(
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
         
-    room.held_by = payload.held_by
-    room.comments = payload.comments
+    # Check if we are trying to update name, capacity, or room_gender
+    has_unoccupied_fields = (
+        (payload.name is not None and payload.name.strip() != room.name) or
+        (payload.capacity is not None and payload.capacity != room.capacity) or
+        (payload.room_gender is not None and payload.room_gender != room.room_gender)
+    )
+    
+    if has_unoccupied_fields:
+        occupants_count = db.query(Registrant).filter(Registrant.room_id == room_id).count()
+        if occupants_count > 0:
+            raise HTTPException(
+                status_code=400, 
+                detail="Cannot edit Name, Capacity, or Gender Constraint of an occupied room."
+            )
+            
+        if payload.name is not None:
+            name_stripped = payload.name.strip()
+            if name_stripped != room.name:
+                existing_room = db.query(Room).filter(Room.name == name_stripped).first()
+                if existing_room:
+                    raise HTTPException(status_code=400, detail="A room with this name already exists.")
+                room.name = name_stripped
+                
+        if payload.capacity is not None:
+            if payload.capacity <= 0:
+                raise HTTPException(status_code=400, detail="Capacity must be greater than zero.")
+            room.capacity = payload.capacity
+            
+        if payload.room_gender is not None:
+            room.room_gender = payload.room_gender
+            
+    # Always allow updating held_by and comments
+    if payload.held_by is not None:
+        room.held_by = payload.held_by
+    if payload.comments is not None:
+        room.comments = payload.comments
+        
     db.commit()
     db.refresh(room)
     return room
