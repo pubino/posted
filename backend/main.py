@@ -453,3 +453,22 @@ async def list_admin_lodging_registrants(request: Request, db: Session = Depends
         (Registrant.lodging == "Yes") | (Registrant.lodging == "yes")
     ).order_by(Registrant.last_name.asc(), Registrant.first_name.asc()).all()
     return registrants
+
+
+@app.post("/api/admin/remove-dissy")
+async def remove_dissy(
+    x_drupal_webhook_token: Optional[str] = Header(None, alias="X-Drupal-Webhook-Token"),
+    db: Session = Depends(get_db)
+):
+    if not x_drupal_webhook_token or x_drupal_webhook_token != settings.nametags_webhook_token:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    
+    reg_deleted = db.query(Registrant).filter(Registrant.email_address == "dissy022@gmailcom").delete()
+    pres_deleted = db.query(Presenter).filter(Presenter.email_address == "dissy022@gmailcom").delete()
+    db.commit()
+    
+    return {
+        "status": "success",
+        "registrants_deleted": reg_deleted,
+        "presenters_deleted": pres_deleted
+    }
