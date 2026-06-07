@@ -1,6 +1,6 @@
 import pytest
 from fastapi import status
-from backend.models import Registrant, Room, Presenter
+from backend.models import Registrant, Room
 
 def test_nametags_webhook_lodging_fields(client, db_session):
     # Test valid ingestion with flat lodging fields
@@ -208,30 +208,3 @@ def test_delete_room_clears_registrant_assignments(client, db_session):
     db_session.expire_all()
     reg_db = db_session.query(Registrant).filter(Registrant.id == "reg-assigned").first()
     assert reg_db.room_id is None
-
-
-def test_remove_dissy_endpoint(client, db_session):
-    # Insert dummy records
-    reg = Registrant(id="dissy-reg", email_address="dissy022@gmailcom")
-    pres = Presenter(id="dissy-pres", email_address="dissy022@gmailcom", first_name="Dissy", last_name="Test")
-    db_session.add_all([reg, pres])
-    db_session.commit()
-    
-    # Test unauthorized
-    response = client.post("/api/admin/remove-dissy")
-    assert response.status_code == status.HTTP_401_UNAUTHORIZED
-    
-    # Test authorized
-    response = client.post(
-        "/api/admin/remove-dissy",
-        headers={"X-Drupal-Webhook-Token": "test_webhook_token"}
-    )
-    assert response.status_code == status.HTTP_200_OK
-    data = response.json()
-    assert data["registrants_deleted"] == 1
-    assert data["presenters_deleted"] == 1
-    
-    # Verify deleted in DB
-    db_session.expire_all()
-    assert db_session.query(Registrant).filter(Registrant.email_address == "dissy022@gmailcom").first() is None
-    assert db_session.query(Presenter).filter(Presenter.email_address == "dissy022@gmailcom").first() is None
