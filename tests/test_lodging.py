@@ -22,7 +22,7 @@ def test_nametags_webhook_lodging_fields(client, db_session):
     }
 
     response = client.post(
-        "/api/nametags-webhook",
+        "/api/nametags-lodging-webhook",
         json={"data": payload},
         headers={"X-Drupal-Webhook-Token": "test_webhook_token"}
     )

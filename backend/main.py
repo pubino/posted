@@ -232,6 +232,7 @@ def is_admin_authorized(request: Request) -> bool:
 
 
 @app.post("/api/nametags-webhook")
+@app.post("/api/nametags-lodging-webhook")
 async def nametags_webhook(
     payload: NametagsWebhookPayload,
     x_drupal_webhook_token: Optional[str] = Header(None, alias="X-Drupal-Webhook-Token"),
