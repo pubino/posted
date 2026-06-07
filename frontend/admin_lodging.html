@@ -55,43 +55,51 @@
     }
     
     /* Tally Grid Box */
-    .tally-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-      gap: 1rem;
-      margin-bottom: 1.5rem;
+    .tally-inline-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      align-items: center;
     }
-    .tally-card {
-      background: #fff;
-      border: 1px solid #eee;
-      border-radius: 8px;
-      padding: 1rem;
-      text-align: center;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+    .tally-pill {
+      background: #f8f9fa;
+      border: 1px solid #e9ecef;
+      border-radius: 20px;
+      padding: 0.35rem 0.85rem;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
       transition: all 0.2s ease-in-out;
     }
-    .tally-card.clickable {
+    .tally-pill.clickable {
       cursor: pointer;
     }
-    .tally-card.clickable:hover {
+    .tally-pill.clickable:hover {
       border-color: #f58025;
-      transform: translateY(-2px);
-      box-shadow: 0 4px 8px rgba(245, 128, 37, 0.1);
+      background: #fffbf7;
     }
-    .tally-card .count {
-      font-size: 1.75rem;
-      font-weight: 700;
-      color: #f58025;
-    }
-    .tally-card.danger .count {
-      color: #dc3545;
-    }
-    .tally-card .label {
-      font-size: 0.8rem;
-      color: #666;
+    .tally-pill .label {
+      color: #6c757d;
+      font-weight: 500;
+      font-size: 0.75rem;
       text-transform: uppercase;
-      margin-top: 0.25rem;
-      font-weight: 600;
+      letter-spacing: 0.03em;
+    }
+    .tally-pill .count {
+      color: #f58025;
+      font-weight: 700;
+      font-size: 0.95rem;
+    }
+    .tally-pill.danger {
+      background: #fff5f5;
+      border-color: #ffe3e3;
+    }
+    .tally-pill.danger .label {
+      color: #e53e3e;
+    }
+    .tally-pill.danger .count {
+      color: #dc3545;
     }
 
     /* Workspace Layout */
@@ -560,29 +568,31 @@
         <div class="row">
           <div class="col-md-12">
             
-            <h2 class="page-title">Lodging Planner</h2>
-
-            <!-- TALLY stats boxes -->
-            <div class="tally-grid">
-              <div class="tally-card">
-                <div class="count" id="stat-total-requests">0</div>
-                <div class="label">Total Requests</div>
-              </div>
-              <div class="tally-card">
-                <div class="count" id="stat-assigned">0</div>
-                <div class="label">Assigned Occupants</div>
-              </div>
-              <div class="tally-card">
-                <div class="count" id="stat-unassigned">0</div>
-                <div class="label">Unassigned</div>
-              </div>
-              <div class="tally-card">
-                <div class="count" id="stat-rooms">0</div>
-                <div class="label">Rooms Booked</div>
-              </div>
-              <div class="tally-card danger" id="card-warnings-tally">
-                <div class="count" id="stat-warnings">0</div>
-                <div class="label">Active Conflicts</div>
+            <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+              <h2 class="page-title" style="margin-bottom: 0 !important;">Lodging Planner</h2>
+              
+              <!-- TALLY stats boxes -->
+              <div class="tally-inline-bar">
+                <div class="tally-pill">
+                  <span class="label">Total Requests:</span>
+                  <span class="count" id="stat-total-requests">0</span>
+                </div>
+                <div class="tally-pill">
+                  <span class="label">Assigned:</span>
+                  <span class="count" id="stat-assigned">0</span>
+                </div>
+                <div class="tally-pill">
+                  <span class="label">Unassigned:</span>
+                  <span class="count" id="stat-unassigned">0</span>
+                </div>
+                <div class="tally-pill">
+                  <span class="label">Rooms:</span>
+                  <span class="count" id="stat-rooms">0</span>
+                </div>
+                <div class="tally-pill danger" id="card-warnings-tally">
+                  <span class="label">Conflicts:</span>
+                  <span class="count" id="stat-warnings">0</span>
+                </div>
               </div>
             </div>
 
