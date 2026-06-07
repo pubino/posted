@@ -223,6 +223,8 @@ class RoomResponse(BaseModel):
     name: str
     capacity: int
     room_gender: str
+    held_by: Optional[str] = None
+    comments: Optional[str] = None
     created_at: datetime.datetime
 
     class Config:
@@ -233,6 +235,11 @@ class RoomCreate(BaseModel):
     name: str
     capacity: int = 2
     room_gender: str = "Any"
+
+
+class RoomUpdate(BaseModel):
+    held_by: Optional[str] = None
+    comments: Optional[str] = None
 
 
 class RoomAssignmentPayload(BaseModel):

@@ -48,4 +48,6 @@ class Room(Base):
     name = Column(String, unique=True, index=True, nullable=False)
     capacity = Column(Integer, default=2, nullable=False)
     room_gender = Column(String, default="Any", nullable=False)  # "Any", "Man", "Woman", "Non-binary", "Mixed"
+    held_by = Column(String, nullable=True)
+    comments = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)

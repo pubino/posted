@@ -208,3 +208,35 @@ def test_delete_room_clears_registrant_assignments(client, db_session):
     db_session.expire_all()
     reg_db = db_session.query(Registrant).filter(Registrant.id == "reg-assigned").first()
     assert reg_db.room_id is None
+
+def test_room_details_update(client, db_session):
+    headers = {"X-MS-CLIENT-PRINCIPAL-NAME": "bino@princeton.edu"}
+
+    # Insert room
+    room = Room(id="room-details", name="Details Room", capacity=2, room_gender="Any")
+    db_session.add(room)
+    db_session.commit()
+
+    # 1. Update Room details (Unauthorized)
+    response = client.patch(
+        "/api/admin/rooms/room-details",
+        json={"held_by": "Dr. Massey", "comments": "Temporary block"}
+    )
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    # 2. Update Room details (Authorized)
+    response = client.patch(
+        "/api/admin/rooms/room-details",
+        json={"held_by": "Dr. Massey", "comments": "Temporary block"},
+        headers=headers
+    )
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert data["held_by"] == "Dr. Massey"
+    assert data["comments"] == "Temporary block"
+
+    # Verify db state
+    db_session.expire_all()
+    room_db = db_session.query(Room).filter(Room.id == "room-details").first()
+    assert room_db.held_by == "Dr. Massey"
+    assert room_db.comments == "Temporary block"

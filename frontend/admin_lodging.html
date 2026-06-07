@@ -546,6 +546,9 @@
                     </div>
                   </div>
                 </div>
+                <div class="col-auto">
+                  <button class="btn-brand-filled" id="open-create-room-btn"><i class="fa-solid fa-plus"></i> Room</button>
+                </div>
               </div>
             </div>
           </div>
@@ -557,7 +560,7 @@
         <div class="row">
           <div class="col-md-12">
             
-            <h2 class="page-title">Lodging Management Dashboard</h2>
+            <h2 class="page-title">Lodging Management</h2>
 
             <!-- TALLY stats boxes -->
             <div class="tally-grid">
@@ -615,8 +618,7 @@
               <!-- RIGHT COLUMN: ROOMS MANAGEMENT -->
               <div class="rooms-pane">
                 <div class="rooms-section-header">
-                  <h3 style="font-family: 'Lora', serif; font-weight: 700; margin: 0;">Room Allocations</h3>
-                  <button class="btn-brand-filled" id="open-create-room-btn"><i class="fa-solid fa-plus"></i> Book New Room</button>
+                  <h3 style="font-family: 'Lora', serif; font-weight: 700; margin: 0;">Planned Room Assignments</h3>
                 </div>
 
                 <div class="rooms-grid" id="rooms-grid-container">
@@ -643,7 +645,7 @@
   <div class="custom-modal" id="create-room-modal">
     <div class="custom-modal-content">
       <button class="modal-close" id="close-modal-btn">&times;</button>
-      <h3 style="font-family: 'Lora', serif; font-weight: 700; margin-bottom: 1.5rem;">Book New Room</h3>
+      <h3 style="font-family: 'Lora', serif; font-weight: 700; margin-bottom: 1.5rem;">Create Room</h3>
       
       <form id="create-room-form">
         <div class="form-group">
@@ -671,8 +673,7 @@
         </div>
         
         <div class="text-end mt-4">
-          <button type="button" class="btn-brand-border mr-2" id="cancel-modal-btn">Cancel</button>
-          <button type="submit" class="btn-brand-filled">Create & Book</button>
+          <button type="submit" class="btn-brand-filled">Create</button>
         </div>
       </form>
     </div>
@@ -699,6 +700,30 @@
     </div>
   </div>
 
+  <!-- ROOM DETAILS MODAL -->
+  <div class="custom-modal" id="room-details-modal">
+    <div class="custom-modal-content">
+      <button class="modal-close" id="close-details-modal-btn">&times;</button>
+      <h3 style="font-family: 'Lora', serif; font-weight: 700; margin-bottom: 1.5rem;">Room Details - <span id="details-room-name">Room</span></h3>
+      
+      <form id="room-details-form">
+        <input type="hidden" id="details-room-id" />
+        <div class="form-group">
+          <label for="details-held-by">Held By (Optional)</label>
+          <input type="text" id="details-held-by" class="form-control" placeholder="e.g. John Smith, Temporary Booking Name" />
+        </div>
+        <div class="form-group">
+          <label for="details-comments">Comments / Notes (Optional)</label>
+          <textarea id="details-comments" class="form-control" rows="3" placeholder="Enter notes about this room assignment..."></textarea>
+        </div>
+        
+        <div class="text-end mt-4">
+          <button type="submit" class="btn-brand-filled">Save Details</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Javascript Logic -->
   <script>
     let allRegistrants = [];
@@ -722,7 +747,13 @@
         createModal.classList.add("show");
       });
       document.getElementById("close-modal-btn").addEventListener("click", () => createModal.classList.remove("show"));
-      document.getElementById("cancel-modal-btn").addEventListener("click", () => createModal.classList.remove("show"));
+
+      // Room details modal handlers
+      const detailsModal = document.getElementById("room-details-modal");
+      document.getElementById("close-details-modal-btn").addEventListener("click", () => {
+        detailsModal.classList.remove("show");
+      });
+      document.getElementById("room-details-form").addEventListener("submit", saveRoomDetails);
       
       // Modal Create form
       document.getElementById("create-room-form").addEventListener("submit", createRoom);
@@ -855,8 +886,8 @@
         container.innerHTML = `
           <div class="col-span-full text-center text-muted py-5 bg-white border rounded">
             <i class="fa-solid fa-door-closed fa-3x mb-3" style="color: #ddd;"></i>
-            <h4>No Rooms Booked Yet</h4>
-            <p>Use the "Book New Room" button in the upper right to begin allocating rooms.</p>
+            <h4>No Rooms Created Yet</h4>
+            <p>Use the + Room button to plan a room.</p>
           </div>
         `;
         activeWarningsCount = 0;
@@ -965,6 +996,9 @@
                 </div>
               </div>
               <div class="room-actions">
+                <button class="unassign-btn mr-2" onclick="openRoomDetailsModal('${room.id}', '${escapeHtml(room.name)}', '${escapeHtml(room.held_by || "")}', '${escapeHtml(room.comments || "")}')" title="Room Details & Notes">
+                  <i class="fa-solid fa-circle-info"></i>
+                </button>
                 <button class="room-delete-btn" onclick="deleteRoom('${room.id}', '${escapeHtml(room.name)}')" title="Delete room and unassign attendees">
                   <i class="fa-solid fa-trash-can"></i>
                 </button>
@@ -974,6 +1008,13 @@
             <div class="room-occupants">
               ${slotsHtml}
             </div>
+
+            ${room.held_by || room.comments ? `
+              <div class="px-3 pb-2 pt-0" style="font-size: 0.75rem; border-top: 1px dashed #eee; background-color: #fafafa; color: #555; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; margin-top: -0.5rem; margin-bottom: 0.5rem;">
+                ${room.held_by ? `<div class="mt-1"><strong>Held By:</strong> ${escapeHtml(room.held_by)}</div>` : ''}
+                ${room.comments ? `<div class="mt-1 text-muted" style="white-space: pre-wrap; font-style: italic;">"${escapeHtml(room.comments)}"</div>` : ''}
+              </div>
+            ` : ''}
 
             ${feedbackBlock}
           </div>
@@ -1324,6 +1365,45 @@
       document.getElementById("select-attendee-modal").classList.remove("show");
       await assignRegistrantToRoom(registrantId, activeSelectRoomId);
       activeSelectRoomId = null;
+    }
+
+    function openRoomDetailsModal(roomId, roomName, heldBy, comments) {
+      document.getElementById("details-room-id").value = roomId;
+      document.getElementById("details-room-name").innerText = roomName;
+      document.getElementById("details-held-by").value = heldBy;
+      document.getElementById("details-comments").value = comments;
+      document.getElementById("room-details-modal").classList.add("show");
+    }
+
+    async function saveRoomDetails(e) {
+      e.preventDefault();
+      const roomId = document.getElementById("details-room-id").value;
+      const heldBy = document.getElementById("details-held-by").value.trim();
+      const comments = document.getElementById("details-comments").value.trim();
+
+      try {
+        const response = await fetch(`/api/admin/rooms/${roomId}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            held_by: heldBy || null,
+            comments: comments || null
+          })
+        });
+
+        if (!response.ok) {
+          const errData = await response.json();
+          throw new Error(errData.detail || "Failed to update room details.");
+        }
+
+        document.getElementById("room-details-modal").classList.remove("show");
+        await fetchData();
+      } catch (err) {
+        console.error("Save details error:", err);
+        alert(`Could not save room details: ${err.message}`);
+      }
     }
 
     // Helper functions

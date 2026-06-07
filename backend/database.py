@@ -73,3 +73,26 @@ def run_migrations():
                             logger.error(f"Failed to add column '{col_name}': {e}")
                     except Exception as inner_e:
                         logger.error(f"Failed to check column existence after migration failure: {inner_e}")
+                        
+    if "rooms" in inspector.get_table_names():
+        columns = [col['name'] for col in inspector.get_columns('rooms')]
+        new_room_cols = {
+            'held_by': 'VARCHAR',
+            'comments': 'VARCHAR'
+        }
+        for col_name, col_type in new_room_cols.items():
+            if col_name not in columns:
+                try:
+                    with engine.begin() as conn:
+                        conn.execute(text(f"ALTER TABLE rooms ADD COLUMN {col_name} {col_type}"))
+                    logger.info(f"Added column '{col_name}' to 'rooms' table successfully.")
+                except Exception as e:
+                    try:
+                        re_inspector = inspect(engine)
+                        re_columns = [col['name'] for col in re_inspector.get_columns('rooms')]
+                        if col_name in re_columns:
+                            logger.info(f"Column '{col_name}' was added concurrently to 'rooms' by another instance.")
+                        else:
+                            logger.error(f"Failed to add column '{col_name}' to 'rooms': {e}")
+                    except Exception as inner_e:
+                        logger.error(f"Failed to check rooms column existence after migration failure: {inner_e}")

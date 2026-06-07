@@ -13,7 +13,7 @@ import shutil
 from backend.config import settings
 from backend.database import get_db, engine, Base, run_migrations
 from backend.models import Presenter, Registrant, Room
-from backend.schemas import DrupalWebhookPayload, PresenterResponse, NametagsWebhookPayload, RegistrantResponse, RoomResponse, RoomCreate, RoomAssignmentPayload
+from backend.schemas import DrupalWebhookPayload, PresenterResponse, NametagsWebhookPayload, RegistrantResponse, RoomResponse, RoomCreate, RoomAssignmentPayload, RoomUpdate
 from backend.download_assets import download_assets
 
 # Setup Logging
@@ -412,6 +412,27 @@ async def delete_admin_room(
     db.delete(room)
     db.commit()
     return {"status": "success", "message": "Room deleted and assignments cleared."}
+
+
+@app.patch("/api/admin/rooms/{room_id}", response_model=RoomResponse)
+async def update_admin_room(
+    request: Request,
+    room_id: str,
+    payload: RoomUpdate,
+    db: Session = Depends(get_db)
+):
+    if not is_admin_authorized(request):
+        raise HTTPException(status_code=403, detail="Access Forbidden")
+        
+    room = db.query(Room).filter(Room.id == room_id).first()
+    if not room:
+        raise HTTPException(status_code=404, detail="Room not found")
+        
+    room.held_by = payload.held_by
+    room.comments = payload.comments
+    db.commit()
+    db.refresh(room)
+    return room
 
 
 @app.post("/api/admin/rooms/assign")
