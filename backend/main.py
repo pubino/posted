@@ -11,9 +11,9 @@ import datetime
 import shutil
 
 from backend.config import settings
-from backend.database import get_db, engine, Base
-from backend.models import Presenter, Registrant
-from backend.schemas import DrupalWebhookPayload, PresenterResponse, NametagsWebhookPayload, RegistrantResponse
+from backend.database import get_db, engine, Base, run_migrations
+from backend.models import Presenter, Registrant, Room
+from backend.schemas import DrupalWebhookPayload, PresenterResponse, NametagsWebhookPayload, RegistrantResponse, RoomResponse, RoomCreate, RoomAssignmentPayload
 from backend.download_assets import download_assets
 
 # Setup Logging
@@ -26,6 +26,7 @@ async def lifespan(app: FastAPI):
     logger.info("Initializing database and tables...")
     try:
         Base.metadata.create_all(bind=engine)
+        run_migrations()
         logger.info("Database tables initialized successfully.")
     except Exception as e:
         logger.error(f"Failed to initialize database tables: {e}")
@@ -260,6 +261,10 @@ async def nametags_webhook(
         existing.student = payload.student or existing.student
         existing.t_shirt_size = payload.t_shirt_size or existing.t_shirt_size
         existing.presenting_poster = payload.presenting_poster or existing.presenting_poster
+        existing.lodging = payload.lodging or existing.lodging
+        existing.gender_identity = payload.gender_identity or existing.gender_identity
+        existing.roommate_preference = payload.roommate_preference or existing.roommate_preference
+        existing.identified_roommate = payload.identified_roommate or existing.identified_roommate
         existing.drupal_sid = payload.sid or existing.drupal_sid
         existing.serial_number = payload.serial or existing.serial_number
         existing.registered_at = datetime.datetime.utcnow()
@@ -278,6 +283,10 @@ async def nametags_webhook(
             student=payload.student,
             t_shirt_size=payload.t_shirt_size,
             presenting_poster=payload.presenting_poster,
+            lodging=payload.lodging,
+            gender_identity=payload.gender_identity,
+            roommate_preference=payload.roommate_preference,
+            identified_roommate=payload.identified_roommate,
             drupal_sid=payload.sid,
             serial_number=payload.serial,
             registered_at=datetime.datetime.utcnow()
@@ -333,3 +342,113 @@ async def upload_logo(
         shutil.copyfileobj(file.file, buffer)
         
     return {"status": "success", "url": f"/static/images/{target_name}"}
+
+
+# --- Lodging & Room Assignment Admin Endpoints ---
+
+@app.get("/admin/lodging")
+async def get_admin_lodging(request: Request):
+    if not is_admin_authorized(request):
+        principal_name = request.headers.get("X-MS-CLIENT-PRINCIPAL-NAME")
+        if (not principal_name or principal_name.strip().lower() == "anonymous") and os.getenv("ALLOW_LOCAL_DEV_ADMIN") != "true":
+            return RedirectResponse(url="/.auth/login/aad?post_login_redirect_uri=/admin/lodging")
+        raise HTTPException(status_code=403, detail="Access Forbidden: Unauthorized user principal.")
+    with open("frontend/admin_lodging.html", "r") as f:
+        content = f.read()
+    return HTMLResponse(content=content)
+
+
+@app.get("/api/admin/rooms", response_model=List[RoomResponse])
+async def list_admin_rooms(request: Request, db: Session = Depends(get_db)):
+    if not is_admin_authorized(request):
+        raise HTTPException(status_code=403, detail="Access Forbidden")
+    rooms = db.query(Room).order_by(Room.name.asc()).all()
+    return rooms
+
+
+@app.post("/api/admin/rooms", response_model=RoomResponse)
+async def create_admin_room(
+    request: Request,
+    payload: RoomCreate,
+    db: Session = Depends(get_db)
+):
+    if not is_admin_authorized(request):
+        raise HTTPException(status_code=403, detail="Access Forbidden")
+        
+    # Check duplicate name
+    existing_room = db.query(Room).filter(Room.name == payload.name.strip()).first()
+    if existing_room:
+        raise HTTPException(status_code=400, detail="A room with this name already exists.")
+        
+    room = Room(
+        id=str(uuid.uuid4()),
+        name=payload.name.strip(),
+        capacity=payload.capacity,
+        room_gender=payload.room_gender
+    )
+    db.add(room)
+    db.commit()
+    db.refresh(room)
+    return room
+
+
+@app.delete("/api/admin/rooms/{room_id}")
+async def delete_admin_room(
+    request: Request,
+    room_id: str,
+    db: Session = Depends(get_db)
+):
+    if not is_admin_authorized(request):
+        raise HTTPException(status_code=403, detail="Access Forbidden")
+        
+    room = db.query(Room).filter(Room.id == room_id).first()
+    if not room:
+        raise HTTPException(status_code=404, detail="Room not found")
+        
+    # Unassign all registrants from this room
+    db.query(Registrant).filter(Registrant.room_id == room_id).update({Registrant.room_id: None})
+    
+    db.delete(room)
+    db.commit()
+    return {"status": "success", "message": "Room deleted and assignments cleared."}
+
+
+@app.post("/api/admin/rooms/assign")
+async def assign_admin_room(
+    request: Request,
+    payload: RoomAssignmentPayload,
+    db: Session = Depends(get_db)
+):
+    if not is_admin_authorized(request):
+        raise HTTPException(status_code=403, detail="Access Forbidden")
+        
+    registrant = db.query(Registrant).filter(Registrant.id == payload.registrant_id).first()
+    if not registrant:
+        raise HTTPException(status_code=404, detail="Registrant not found")
+        
+    if payload.room_id:
+        room = db.query(Room).filter(Room.id == payload.room_id).first()
+        if not room:
+            raise HTTPException(status_code=404, detail="Room not found")
+            
+        # Check capacity
+        current_occupants = db.query(Registrant).filter(Registrant.room_id == payload.room_id).count()
+        if current_occupants >= room.capacity:
+            raise HTTPException(status_code=400, detail="Room is already at full capacity")
+            
+        registrant.room_id = payload.room_id
+    else:
+        registrant.room_id = None
+        
+    db.commit()
+    return {"status": "success", "message": "Room assignment updated."}
+
+
+@app.get("/api/admin/lodging/registrants", response_model=List[RegistrantResponse])
+async def list_admin_lodging_registrants(request: Request, db: Session = Depends(get_db)):
+    if not is_admin_authorized(request):
+        raise HTTPException(status_code=403, detail="Access Forbidden")
+    registrants = db.query(Registrant).filter(
+        (Registrant.lodging == "Yes") | (Registrant.lodging == "yes")
+    ).order_by(Registrant.last_name.asc(), Registrant.first_name.asc()).all()
+    return registrants

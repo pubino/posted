@@ -38,3 +38,38 @@ def get_db():
         yield db
     finally:
         db.close()
+
+def run_migrations():
+    from sqlalchemy import inspect, text
+    import logging
+    logger = logging.getLogger("posted.database")
+    inspector = inspect(engine)
+    if "registrants" in inspector.get_table_names():
+        columns = [col['name'] for col in inspector.get_columns('registrants')]
+        
+        # New Lodging Fields to check and add dynamically
+        new_cols = {
+            'lodging': 'VARCHAR',
+            'gender_identity': 'VARCHAR',
+            'roommate_preference': 'VARCHAR',
+            'identified_roommate': 'VARCHAR',
+            'room_id': 'VARCHAR'
+        }
+        
+        for col_name, col_type in new_cols.items():
+            if col_name not in columns:
+                try:
+                    with engine.begin() as conn:
+                        conn.execute(text(f"ALTER TABLE registrants ADD COLUMN {col_name} {col_type}"))
+                    logger.info(f"Added column '{col_name}' to 'registrants' table successfully.")
+                except Exception as e:
+                    # Recheck if another instance added it concurrently
+                    try:
+                        re_inspector = inspect(engine)
+                        re_columns = [col['name'] for col in re_inspector.get_columns('registrants')]
+                        if col_name in re_columns:
+                            logger.info(f"Column '{col_name}' was added concurrently by another instance.")
+                        else:
+                            logger.error(f"Failed to add column '{col_name}': {e}")
+                    except Exception as inner_e:
+                        logger.error(f"Failed to check column existence after migration failure: {inner_e}")

@@ -33,3 +33,19 @@ class Registrant(Base):
     drupal_sid = Column(Integer, nullable=True)
     serial_number = Column(Integer, nullable=True)
     registered_at = Column(DateTime, default=datetime.datetime.utcnow)
+    
+    # Lodging Extension Fields
+    lodging = Column(String, nullable=True)  # "Yes" or "No"
+    gender_identity = Column(String, nullable=True)
+    roommate_preference = Column(String, nullable=True)
+    identified_roommate = Column(String, nullable=True)
+    room_id = Column(String, nullable=True)  # References rooms.id
+
+class Room(Base):
+    __tablename__ = "rooms"
+
+    id = Column(String, primary_key=True, index=True)
+    name = Column(String, unique=True, index=True, nullable=False)
+    capacity = Column(Integer, default=2, nullable=False)
+    room_gender = Column(String, default="Any", nullable=False)  # "Any", "Man", "Woman", "Non-binary", "Mixed"
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)

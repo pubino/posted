@@ -1,0 +1,1342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lodging Calculator | CAARMS 2026 Admin</title>
+
+  <!-- Typekit, Fonts & FontAwesome -->
+  <link rel="stylesheet" href="https://use.typekit.net/qss7gby.css" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Libre+Franklin:ital,wght@0,100..900;1,100..900&family=Lora:ital,wght@0,400..700;1,400..700&display=swap" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+  <!-- Downloaded Local Stylesheets -->
+  <link rel="stylesheet" href="/static/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="/static/css/base_styles.css" />
+  <link rel="stylesheet" href="/static/css/tiger_styles.css" />
+  <link rel="stylesheet" href="/static/css/align_header.css" />
+  <link rel="stylesheet" href="/static/css/site_title.css" />
+
+  <style>
+    body {
+      font-family: 'Libre Franklin', sans-serif;
+      background-color: #f8f9fa !important;
+      color: #2b2b2b;
+    }
+    .page-title {
+      font-family: 'Lora', serif;
+      color: #1a1a1a;
+      font-weight: 700;
+      margin-bottom: 2rem;
+      font-size: 2.5rem;
+      border-bottom: none !important;
+    }
+    .admin-container {
+      padding: 3rem 0;
+    }
+    
+    /* Control Box Styles */
+    .control-panel {
+      background: #fdfdfd;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02);
+    }
+    .control-title {
+      font-family: 'Lora', serif;
+      font-weight: 700;
+      font-size: 1.25rem;
+      color: #1a1a1a;
+      margin-bottom: 1rem;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 0.5rem;
+    }
+    
+    /* Tally Grid Box */
+    .tally-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .tally-card {
+      background: #fff;
+      border: 1px solid #eee;
+      border-radius: 8px;
+      padding: 1rem;
+      text-align: center;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+      transition: all 0.2s ease-in-out;
+    }
+    .tally-card.clickable {
+      cursor: pointer;
+    }
+    .tally-card.clickable:hover {
+      border-color: #f58025;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(245, 128, 37, 0.1);
+    }
+    .tally-card .count {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: #f58025;
+    }
+    .tally-card.danger .count {
+      color: #dc3545;
+    }
+    .tally-card .label {
+      font-size: 0.8rem;
+      color: #666;
+      text-transform: uppercase;
+      margin-top: 0.25rem;
+      font-weight: 600;
+    }
+
+    /* Workspace Layout */
+    .lodging-workspace {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 2rem;
+      align-items: start;
+    }
+    @media (max-width: 992px) {
+      .lodging-workspace {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Unassigned Sidebar */
+    .sidebar-unassigned {
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 1.5rem;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+      position: sticky;
+      top: 20px;
+      max-height: calc(100vh - 40px);
+      display: flex;
+      flex-direction: column;
+    }
+    .sidebar-header {
+      border-bottom: 1px solid #eee;
+      padding-bottom: 1rem;
+      margin-bottom: 1rem;
+    }
+    .unassigned-list {
+      overflow-y: auto;
+      flex-grow: 1;
+      padding-right: 5px;
+      min-height: 200px;
+    }
+    /* Drag-over dropzone for unassigning */
+    .sidebar-unassigned.dragover {
+      border-color: #f58025;
+      background-color: rgba(245, 128, 37, 0.05);
+    }
+
+    /* Registrant Card */
+    .registrant-card {
+      background: #fdfdfd;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      padding: 0.75rem;
+      margin-bottom: 0.75rem;
+      cursor: grab;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+    .registrant-card:hover {
+      border-color: #f58025;
+      box-shadow: 0 4px 12px rgba(245, 128, 37, 0.1);
+      transform: translateY(-1px);
+    }
+    .registrant-card.dragging {
+      opacity: 0.4;
+      cursor: grabbing;
+    }
+    .registrant-card .name {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: #1a1a1a;
+      margin-bottom: 0.25rem;
+    }
+    .registrant-card .institution {
+      font-size: 0.8rem;
+      color: #666;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 0.25rem;
+    }
+    .registrant-card .badges-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.25rem;
+      margin-top: 0.5rem;
+    }
+
+    /* Custom Badges */
+    .badge-gender {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      padding: 0.15rem 0.4rem;
+      border-radius: 3px;
+    }
+    .gender-Woman { background-color: #fce8e6; color: #a51d24; }
+    .gender-Man { background-color: #e8f0fe; color: #1a73e8; }
+    .gender-Non-binary { background-color: #f3e8fd; color: #8a3ffc; }
+    .gender-Other { background-color: #e6fcf4; color: #0f865f; }
+    .gender-Prefer-not-to-say { background-color: #e9ecef; color: #495057; }
+
+    .badge-pref {
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 0.15rem 0.4rem;
+      border-radius: 3px;
+    }
+    .pref-Require { background-color: #f8d7da; color: #721c24; }
+    .pref-Prefer { background-color: #fff3cd; color: #856404; }
+
+    .badge-request {
+      font-size: 0.7rem;
+      font-weight: 600;
+      background-color: #d1ecf1;
+      color: #0c5460;
+      padding: 0.15rem 0.4rem;
+      border-radius: 3px;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.2rem;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* Rooms Pane */
+    .rooms-pane {
+      display: flex;
+      flex-direction: column;
+    }
+    .rooms-section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+    .rooms-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 1.5rem;
+    }
+
+    /* Room Card */
+    .room-card {
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+      transition: all 0.25s ease;
+      display: flex;
+      flex-direction: column;
+      min-height: 240px;
+      position: relative;
+    }
+    .room-card:hover {
+      box-shadow: 0 6px 18px rgba(0,0,0,0.05);
+    }
+    .room-card.dragover {
+      border-color: #f58025;
+      background-color: rgba(245, 128, 37, 0.02);
+      box-shadow: 0 0 0 3px rgba(245, 128, 37, 0.15);
+    }
+    .room-header {
+      padding: 1rem;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background-color: #fafafa;
+      border-top-left-radius: 8px;
+      border-top-right-radius: 8px;
+    }
+    .room-title {
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: #1a1a1a;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .room-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .room-delete-btn {
+      color: #dc3545;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      opacity: 0.7;
+      transition: opacity 0.2s;
+      padding: 0.2rem;
+    }
+    .room-delete-btn:hover {
+      opacity: 1;
+    }
+    .room-meta {
+      font-size: 0.75rem;
+      color: #666;
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      margin-top: 0.25rem;
+    }
+    
+    .room-occupants {
+      padding: 1rem;
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    /* Occupant Items */
+    .occupant-item {
+      background: #fdfdfd;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      padding: 0.5rem 0.75rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: grab;
+      transition: all 0.2s;
+    }
+    .occupant-item:hover {
+      border-color: #f58025;
+      background-color: #fff;
+    }
+    .occupant-info {
+      flex-grow: 1;
+      min-width: 0;
+      padding-right: 0.5rem;
+    }
+    .occupant-name {
+      font-weight: 700;
+      font-size: 0.9rem;
+      color: #1a1a1a;
+    }
+    .occupant-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.2rem;
+      margin-top: 0.2rem;
+    }
+    .unassign-btn {
+      color: #6c757d;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      transition: color 0.2s;
+      padding: 0.2rem;
+    }
+    .unassign-btn:hover {
+      color: #dc3545;
+    }
+
+    /* Bed Slot Placeholders */
+    .bed-slot {
+      border: 2px dashed #ccc;
+      border-radius: 6px;
+      height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #999;
+      font-size: 0.8rem;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+    .bed-slot:hover {
+      border-color: #f58025;
+      color: #f58025;
+      background-color: rgba(245, 128, 37, 0.02);
+    }
+    
+    /* Room Warnings / Success messages */
+    .room-warnings {
+      padding: 0.6rem 1rem;
+      border-top: 1px solid #fce8e6;
+      background-color: #fff8f8;
+      font-size: 0.75rem;
+      color: #dc3545;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      border-bottom-left-radius: 8px;
+      border-bottom-right-radius: 8px;
+    }
+    .warning-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.35rem;
+      line-height: 1.3;
+    }
+    .warning-item i {
+      margin-top: 0.15rem;
+    }
+
+    .room-success-msg {
+      padding: 0.6rem 1rem;
+      border-top: 1px solid #d4edda;
+      background-color: #f8fff9;
+      font-size: 0.75rem;
+      color: #28a745;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      border-bottom-left-radius: 8px;
+      border-bottom-right-radius: 8px;
+    }
+
+    /* Actions Bar */
+    .btn-brand-border {
+      border: 1px solid #ccc;
+      color: #333;
+      background-color: transparent;
+      padding: 0.5rem 1.25rem;
+      border-radius: 4px;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      text-decoration: none;
+      font-family: 'Libre Franklin', sans-serif;
+      transition: all 0.2s ease-in-out;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .btn-brand-border:hover {
+      border-color: #f58025;
+      color: #f58025;
+      text-decoration: none;
+      background-color: rgba(245, 128, 37, 0.02);
+    }
+    .btn-brand-filled {
+      background-color: #f58025;
+      border: 1px solid #f58025;
+      color: #fff;
+      padding: 0.5rem 1.25rem;
+      border-radius: 4px;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      text-decoration: none;
+      font-family: 'Libre Franklin', sans-serif;
+      transition: all 0.2s ease-in-out;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-brand-filled:hover {
+      background-color: #d66c1f;
+      border-color: #d66c1f;
+      color: #fff;
+      text-decoration: none;
+    }
+
+    /* Action Selectors */
+    .assign-quick-select {
+      font-size: 0.8rem;
+      padding: 0.2rem;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      margin-top: 0.4rem;
+      width: 100%;
+      background-color: #fff;
+    }
+
+    /* Modal Styling */
+    .custom-modal {
+      display: none;
+      position: fixed;
+      z-index: 1050;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0,0,0,0.4);
+      align-items: center;
+      justify-content: center;
+    }
+    .custom-modal.show {
+      display: flex;
+    }
+    .custom-modal-content {
+      background-color: #fff;
+      border-radius: 8px;
+      width: 100%;
+      max-width: 500px;
+      padding: 2rem;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+      position: relative;
+    }
+    .modal-close {
+      position: absolute;
+      top: 1rem;
+      right: 1.25rem;
+      font-size: 1.5rem;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      color: #aaa;
+    }
+    .modal-close:hover {
+      color: #333;
+    }
+
+    /* Form Fields */
+    .form-group {
+      margin-bottom: 1.25rem;
+    }
+    .form-group label {
+      font-weight: 600;
+      margin-bottom: 0.4rem;
+      display: block;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body class="page-node content-type-ps-basic-page flavor1 fontset2 btn-v1 menu4 layout-block-padding-medium layout-above-section-spacing-none layout-below-section-spacing-medium">
+
+  <div class="dialog-off-canvas-main-canvas" data-off-canvas-main-canvas>
+    <div class="page page-container">
+      
+      <!-- HEADER REGION -->
+      <header role="banner" class="header region region-header" id="header">
+        <h1 class="sr-only sr-site-name">CAARMS 2026</h1>
+        
+        <div class="header-container container">
+          <div class="princeton-branding">
+            <div class="container">
+              <a href="http://www.princeton.edu" class="pu-logo" title="Princeton University">
+                <img src="/static/images/pu-logo.svg" alt="Princeton University" />
+              </a>
+            </div>
+          </div>
+
+          <div class="site-branding">
+            <div class="container">
+              <div class="row align-items-center">
+                <div class="col-auto">
+                  <a href="https://caarms.princeton.edu/" title="Home" rel="home" class="site-logo" tabindex="-1" aria-hidden="true">
+                    <img class="sizing-custom" src="/static/images/caarms_0.png" alt="Home" style="max-height: 80px;" />
+                  </a>
+                </div>
+                <div class="col">
+                  <div class="site-info">
+                    <div class="site-name">
+                      <a href="https://caarms.princeton.edu/" title="Home" rel="home">CAARMS 2026</a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- MAIN CONTENT SECTION -->
+      <main id="main-content" class="admin-container container-fluid" style="max-width: 1400px;">
+        <div class="row">
+          <div class="col-md-12">
+            
+            <h2 class="page-title">Lodging Management Dashboard</h2>
+
+            <!-- TALLY stats boxes -->
+            <div class="tally-grid">
+              <div class="tally-card">
+                <div class="count" id="stat-total-requests">0</div>
+                <div class="label">Total Requests</div>
+              </div>
+              <div class="tally-card">
+                <div class="count" id="stat-assigned">0</div>
+                <div class="label">Assigned Occupants</div>
+              </div>
+              <div class="tally-card">
+                <div class="count" id="stat-unassigned">0</div>
+                <div class="label">Unassigned</div>
+              </div>
+              <div class="tally-card">
+                <div class="count" id="stat-rooms">0</div>
+                <div class="label">Rooms Booked</div>
+              </div>
+              <div class="tally-card danger" id="card-warnings-tally">
+                <div class="count" id="stat-warnings">0</div>
+                <div class="label">Active Conflicts</div>
+              </div>
+            </div>
+
+            <!-- WORKSPACE SPLIT -->
+            <div class="lodging-workspace mt-4">
+              
+              <!-- LEFT COLUMN: UNASSIGNED ATTENDEES -->
+              <div class="sidebar-unassigned" id="unassigned-sidebar" ondragover="allowDrop(event)" ondragleave="dragLeaveSidebar(event)" ondrop="dropToUnassigned(event)">
+                <div class="sidebar-header">
+                  <h4 style="font-family: 'Lora', serif; font-weight: 700; margin: 0; font-size: 1.2rem;">Unassigned Attendees</h4>
+                  <p class="text-muted small mb-3">Drag attendees to a room, or use the drop-down to assign. Drag them back here to unassign.</p>
+                  
+                  <div class="mb-2">
+                    <input type="text" id="search-unassigned" class="form-control form-control-sm" placeholder="Search by name..." />
+                  </div>
+                  <div>
+                    <select id="gender-filter" class="form-select form-select-sm">
+                      <option value="">All Genders</option>
+                      <option value="Woman">Woman</option>
+                      <option value="Man">Man</option>
+                      <option value="Non-binary">Non-binary</option>
+                      <option value="Prefer not to say">Prefer not to say</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="unassigned-list" id="unassigned-list-container">
+                  <!-- Populated dynamically -->
+                  <div class="text-center text-muted py-5">Loading unassigned attendees...</div>
+                </div>
+              </div>
+
+              <!-- RIGHT COLUMN: ROOMS MANAGEMENT -->
+              <div class="rooms-pane">
+                <div class="rooms-section-header">
+                  <h3 style="font-family: 'Lora', serif; font-weight: 700; margin: 0;">Room Allocations</h3>
+                  <button class="btn-brand-filled" id="open-create-room-btn"><i class="fa-solid fa-plus"></i> Book New Room</button>
+                </div>
+
+                <div class="rooms-grid" id="rooms-grid-container">
+                  <!-- Populated dynamically -->
+                  <div class="text-center text-muted py-5 col-span-full">Loading rooms...</div>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- BACK TO NAV BUTTON -->
+            <div style="margin-top: 3rem;">
+              <a href="/admin/nametags" class="btn-brand-border"><i class="fa-solid fa-tags"></i> Go to Nametags Generator</a>
+              <a href="https://caarms.princeton.edu/administrative-utilities" class="btn-brand-border"><i class="fa fa-arrow-left"></i> Back to Administrative Utilities</a>
+            </div>
+
+          </div>
+        </div>
+      </main>
+
+    </div>
+  </div>
+
+  <!-- BOOK ROOM MODAL -->
+  <div class="custom-modal" id="create-room-modal">
+    <div class="custom-modal-content">
+      <button class="modal-close" id="close-modal-btn">&times;</button>
+      <h3 style="font-family: 'Lora', serif; font-weight: 700; margin-bottom: 1.5rem;">Book New Room</h3>
+      
+      <form id="create-room-form">
+        <div class="form-group">
+          <label for="room-name">Room Name / Number</label>
+          <input type="text" id="room-name" class="form-control" placeholder="e.g. Room 101, Room A, Double Room 5" required />
+        </div>
+        <div class="form-group">
+          <label for="room-capacity">Room Capacity (Beds)</label>
+          <select id="room-capacity" class="form-select">
+            <option value="2" selected>2 occupants (Double Room)</option>
+            <option value="1">1 occupant (Single Room)</option>
+            <option value="3">3 occupants (Triple Room)</option>
+            <option value="4">4 occupants (Quad Room)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="room-gender">Gender Constraint</label>
+          <select id="room-gender" class="form-select">
+            <option value="Any" selected>Any (Flexible / Mixed if no restrictions)</option>
+            <option value="Woman">Woman Only</option>
+            <option value="Man">Man Only</option>
+            <option value="Non-binary">Non-binary Only</option>
+            <option value="Mixed">Mixed-Gender Room (Gender-Inclusive)</option>
+          </select>
+        </div>
+        
+        <div class="text-end mt-4">
+          <button type="button" class="btn-brand-border mr-2" id="cancel-modal-btn">Cancel</button>
+          <button type="submit" class="btn-brand-filled">Create & Book</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- SELECT ATTENDEE MODAL FOR BED CLICK -->
+  <div class="custom-modal" id="select-attendee-modal">
+    <div class="custom-modal-content">
+      <button class="modal-close" id="close-select-modal-btn">&times;</button>
+      <h3 style="font-family: 'Lora', serif; font-weight: 700; margin-bottom: 1.5rem;">Select Attendee for Room</h3>
+      <p class="text-muted small">Choose an unassigned registrant to allocate to <strong id="assign-target-room-name">Room</strong>:</p>
+      
+      <div class="mb-3">
+        <input type="text" id="modal-search-attendee" class="form-control" placeholder="Filter by name..." />
+      </div>
+      
+      <div id="modal-attendee-list" style="max-height: 250px; overflow-y: auto; border: 1px solid #eee; border-radius: 4px; padding: 0.5rem;">
+        <!-- Filled dynamically -->
+      </div>
+      
+      <div class="text-end mt-4">
+        <button type="button" class="btn-brand-border" id="close-select-cancel-btn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Javascript Logic -->
+  <script>
+    let allRegistrants = [];
+    let allRooms = [];
+    let activeWarningsCount = 0;
+    
+    // Drag and Drop tracking
+    let draggedRegistrantId = null;
+
+    document.addEventListener("DOMContentLoaded", () => {
+      fetchData();
+
+      // Hook up UI element handlers
+      document.getElementById("search-unassigned").addEventListener("input", filterAndRenderUnassigned);
+      document.getElementById("gender-filter").addEventListener("change", filterAndRenderUnassigned);
+      
+      // Modal Open/Close handlers
+      const createModal = document.getElementById("create-room-modal");
+      document.getElementById("open-create-room-btn").addEventListener("click", () => {
+        document.getElementById("create-room-form").reset();
+        createModal.classList.add("show");
+      });
+      document.getElementById("close-modal-btn").addEventListener("click", () => createModal.classList.remove("show"));
+      document.getElementById("cancel-modal-btn").addEventListener("click", () => createModal.classList.remove("show"));
+      
+      // Modal Create form
+      document.getElementById("create-room-form").addEventListener("submit", createRoom);
+
+      // Select attendee modal handlers
+      document.getElementById("close-select-modal-btn").addEventListener("click", () => {
+        document.getElementById("select-attendee-modal").classList.remove("show");
+      });
+      document.getElementById("close-select-cancel-btn").addEventListener("click", () => {
+        document.getElementById("select-attendee-modal").classList.remove("show");
+      });
+      document.getElementById("modal-search-attendee").addEventListener("input", filterModalAttendeeList);
+    });
+
+    async function fetchData() {
+      try {
+        const [registrantsRes, roomsRes] = await Promise.all([
+          fetch("/api/admin/lodging/registrants"),
+          fetch("/api/admin/rooms")
+        ]);
+
+        if (!registrantsRes.ok || !roomsRes.ok) {
+          throw new Error("Failed to load registration or room records.");
+        }
+
+        allRegistrants = await registrantsRes.json();
+        allRooms = await roomsRes.json();
+
+        // Calculate and render
+        calculateStatsAndRender();
+      } catch (err) {
+        console.error("Error fetching admin lodging data:", err);
+        alert("Authentication failed or server error. Please make sure you are logged in.");
+      }
+    }
+
+    function calculateStatsAndRender() {
+      // 1. Unassigned vs Assigned
+      const totalRequests = allRegistrants.length;
+      const assigned = allRegistrants.filter(r => r.room_id !== null && r.room_id !== "").length;
+      const unassigned = totalRequests - assigned;
+
+      document.getElementById("stat-total-requests").innerText = totalRequests;
+      document.getElementById("stat-assigned").innerText = assigned;
+      document.getElementById("stat-unassigned").innerText = unassigned;
+      document.getElementById("stat-rooms").innerText = allRooms.length;
+
+      // Render workspaces
+      filterAndRenderUnassigned();
+      renderRoomsGrid();
+      
+      // Update conflicts count in UI (computed in renderRoomsGrid)
+      document.getElementById("stat-warnings").innerText = activeWarningsCount;
+    }
+
+    // Unassigned attendee filtering and rendering
+    function filterAndRenderUnassigned() {
+      const searchVal = document.getElementById("search-unassigned").value.toLowerCase().trim();
+      const genderVal = document.getElementById("gender-filter").value;
+
+      const unassigned = allRegistrants.filter(r => {
+        const isUnassigned = !r.room_id;
+        const name = `${r.first_name || ""} ${r.last_name || ""}`.toLowerCase();
+        const matchesSearch = !searchVal || name.includes(searchVal);
+        const matchesGender = !genderVal || r.gender_identity === genderVal;
+        return isUnassigned && matchesSearch && matchesGender;
+      });
+
+      const container = document.getElementById("unassigned-list-container");
+      if (unassigned.length === 0) {
+        container.innerHTML = `
+          <div class="text-center text-muted py-5" style="border: 1px dashed #eee; border-radius: 6px; background: #fafafa;">
+            <i class="fa-solid fa-user-check fa-2x mb-2" style="color: #ccc;"></i>
+            <p class="mb-0">No unassigned attendees found matching filters.</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = unassigned.map(r => {
+        const genderClass = `gender-${(r.gender_identity || "Prefer-not-to-say").replace(" ", "-")}`;
+        const roommatePref = r.roommate_preference === "Require Same Gender" ? "Require Same" : "Prefer Same";
+        const roommatePrefClass = r.roommate_preference === "Require Same Gender" ? "pref-Require" : "pref-Prefer";
+        
+        let requestBadge = "";
+        if (r.identified_roommate) {
+          const reqStatus = checkRoommateRequestStatus(r);
+          let matchIcon = '<i class="fa-solid fa-question-circle"></i>';
+          if (reqStatus.mutual) {
+            matchIcon = '<i class="fa-solid fa-handshake text-success"></i>';
+          } else if (reqStatus.found) {
+            matchIcon = '<i class="fa-solid fa-arrow-right-long text-warning"></i>';
+          }
+          requestBadge = `
+            <span class="badge-request" title="Requested: ${escapeHtml(r.identified_roommate)}. Status: ${reqStatus.message}">
+              ${matchIcon} Req: ${escapeHtml(r.identified_roommate)}
+            </span>
+          `;
+        }
+
+        // Dropdown actions to quickly assign to any room
+        const roomOptions = allRooms.map(room => `
+          <option value="${room.id}">Assign to ${escapeHtml(room.name)}</option>
+        `).join('');
+
+        return `
+          <div class="registrant-card" draggable="true" ondragstart="dragStart(event, '${r.id}')" ondragend="dragEnd(event)">
+            <div class="name">${escapeHtml(r.first_name)} ${escapeHtml(r.last_name)}</div>
+            <div class="institution">${escapeHtml(r.home_institution_or_organization || "No Affiliation")}</div>
+            
+            <div class="badges-row">
+              <span class="badge-gender ${genderClass}">${escapeHtml(r.gender_identity || "Unspecified")}</span>
+              <span class="badge-pref ${roommatePrefClass}">${roommatePref}</span>
+              ${requestBadge}
+            </div>
+
+            <select class="assign-quick-select mt-2" onchange="quickAssignRegistrant('${r.id}', this.value)">
+              <option value="" selected disabled>-- Quick Assign Room --</option>
+              ${roomOptions}
+            </select>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Room grid rendering & validation checks
+    function renderRoomsGrid() {
+      const container = document.getElementById("rooms-grid-container");
+      if (allRooms.length === 0) {
+        container.innerHTML = `
+          <div class="col-span-full text-center text-muted py-5 bg-white border rounded">
+            <i class="fa-solid fa-door-closed fa-3x mb-3" style="color: #ddd;"></i>
+            <h4>No Rooms Booked Yet</h4>
+            <p>Use the "Book New Room" button in the upper right to begin allocating rooms.</p>
+          </div>
+        `;
+        activeWarningsCount = 0;
+        return;
+      }
+
+      let warningsTally = 0;
+
+      container.innerHTML = allRooms.map(room => {
+        // Find occupants in this room
+        const occupants = allRegistrants.filter(r => r.room_id === room.id);
+        
+        // 1. Capacity checks
+        const spots = [];
+        for (let i = 0; i < room.capacity; i++) {
+          if (occupants[i]) {
+            spots.push(occupants[i]);
+          } else {
+            spots.push(null); // Empty slot
+          }
+        }
+
+        // Run validation rules
+        const validation = validateRoomState(room, occupants);
+        warningsTally += validation.warnings.length;
+
+        // Header gender class banner
+        let genderConstraintText = "Any Gender";
+        let genderIcon = '<i class="fa-solid fa-users text-muted"></i>';
+        if (room.room_gender === "Woman") {
+          genderConstraintText = "Woman Only";
+          genderIcon = '<i class="fa-solid fa-venus text-danger"></i>';
+        } else if (room.room_gender === "Man") {
+          genderConstraintText = "Man Only";
+          genderIcon = '<i class="fa-solid fa-mars text-primary"></i>';
+        } else if (room.room_gender === "Non-binary") {
+          genderConstraintText = "Non-binary Only";
+          genderIcon = '<i class="fa-solid fa-genderless text-purple"></i>';
+        } else if (room.room_gender === "Mixed") {
+          genderConstraintText = "Mixed-Gender Room";
+          genderIcon = '<i class="fa-solid fa-circle-nodes text-success"></i>';
+        }
+
+        // Render warnings HTML block
+        let feedbackBlock = "";
+        if (validation.warnings.length > 0) {
+          feedbackBlock = `
+            <div class="room-warnings">
+              ${validation.warnings.map(w => `
+                <div class="warning-item">
+                  <i class="fa-solid ${w.type === 'error' ? 'fa-circle-xmark text-danger' : 'fa-circle-exclamation text-warning'}"></i>
+                  <span>${escapeHtml(w.text)}</span>
+                </div>
+              `).join('')}
+            </div>
+          `;
+        } else if (occupants.length > 0) {
+          feedbackBlock = `
+            <div class="room-success-msg">
+              <i class="fa-solid fa-circle-check text-success"></i>
+              <span>All preferences and gender rules satisfied.</span>
+            </div>
+          `;
+        }
+
+        // Render slots
+        const slotsHtml = spots.map((occ, idx) => {
+          if (occ) {
+            const genderClass = `gender-${(occ.gender_identity || "Prefer-not-to-say").replace(" ", "-")}`;
+            return `
+              <div class="occupant-item" draggable="true" ondragstart="dragStart(event, '${occ.id}')" ondragend="dragEnd(event)">
+                <div class="occupant-info">
+                  <div class="occupant-name">${escapeHtml(occ.first_name)} ${escapeHtml(occ.last_name)}</div>
+                  <div class="occupant-badges">
+                    <span class="badge-gender ${genderClass}">${escapeHtml(occ.gender_identity || "Unspecified")}</span>
+                    ${occ.roommate_preference === "Require Same Gender" ? '<span class="badge-pref pref-Require" style="font-size:0.65rem;">Require Same</span>' : ''}
+                    ${occ.identified_roommate ? `<span class="badge-request" style="font-size:0.65rem;"><i class="fa-solid fa-user-group"></i> Req: ${escapeHtml(occ.identified_roommate)}</span>` : ''}
+                  </div>
+                </div>
+                <button class="unassign-btn" onclick="unassignRegistrant('${occ.id}')" title="Unassign attendee from room">
+                  <i class="fa-solid fa-xmark"></i>
+                </button>
+              </div>
+            `;
+          } else {
+            return `
+              <div class="bed-slot" onclick="openSelectAttendeeModal('${room.id}', '${room.name}')" title="Click to assign attendee to this slot">
+                <i class="fa-solid fa-bed mr-2"></i> Empty Bed (Click to Assign)
+              </div>
+            `;
+          }
+        }).join('');
+
+        return `
+          <div class="room-card" ondragover="allowDrop(event)" ondragleave="dragLeaveRoom(event)" ondrop="dropToRoom(event, '${room.id}')" id="room-${room.id}">
+            <div class="room-header">
+              <div>
+                <div class="room-title">
+                  <i class="fa-solid fa-door-open" style="color: #f58025;"></i>
+                  ${escapeHtml(room.name)}
+                </div>
+                <div class="room-meta">
+                  <span>Capacity: ${occupants.length}/${room.capacity}</span>
+                  <span>|</span>
+                  <span>${genderIcon} ${genderConstraintText}</span>
+                </div>
+              </div>
+              <div class="room-actions">
+                <button class="room-delete-btn" onclick="deleteRoom('${room.id}', '${escapeHtml(room.name)}')" title="Delete room and unassign attendees">
+                  <i class="fa-solid fa-trash-can"></i>
+                </button>
+              </div>
+            </div>
+
+            <div class="room-occupants">
+              ${slotsHtml}
+            </div>
+
+            ${feedbackBlock}
+          </div>
+        `;
+      }).join('');
+
+      activeWarningsCount = warningsTally;
+    }
+
+    // Helper to check roommate request status
+    function checkRoommateRequestStatus(registrant) {
+      if (!registrant.identified_roommate) return { found: false, mutual: false, message: "" };
+
+      // Look for the requested roommate in our dataset
+      const roommate = findRegistrantByName(registrant.identified_roommate);
+      if (!roommate) {
+        return { found: false, mutual: false, message: `No registered attendee found matching "${registrant.identified_roommate}"` };
+      }
+
+      // Check if they requested this attendee back
+      const myFullName = `${registrant.first_name || ""} ${registrant.last_name || ""}`.trim().toLowerCase();
+      const roommateRequestName = (roommate.identified_roommate || "").trim().toLowerCase();
+      const mutual = roommateRequestName !== "" && (myFullName.includes(roommateRequestName) || roommateRequestName.includes(myFullName));
+
+      return {
+        found: true,
+        mutual: mutual,
+        roommateId: roommate.id,
+        roommateRoomId: roommate.room_id,
+        message: mutual ? "Mutual request confirmed" : "One-sided request only"
+      };
+    }
+
+    // Local name-search helper
+    function findRegistrantByName(name) {
+      if (!name) return null;
+      const query = name.trim().toLowerCase();
+      return allRegistrants.find(r => {
+        const fullName = `${r.first_name || ""} ${r.last_name || ""}`.trim().toLowerCase();
+        return fullName.includes(query) || query.includes(fullName);
+      });
+    }
+
+    // Room validation rules engine
+    function validateRoomState(room, occupants) {
+      const warnings = [];
+
+      if (occupants.length === 0) {
+        return { warnings };
+      }
+
+      // 1. Overcapacity check
+      if (occupants.length > room.capacity) {
+        warnings.push({
+          type: "error",
+          text: `Room is over capacity (Occupants: ${occupants.length}, Capacity: ${room.capacity})`
+        });
+      }
+
+      // Collect gender information
+      const genders = occupants.map(o => o.gender_identity || "Unspecified");
+      const uniqueGenders = [...new Set(genders)];
+
+      // 2. Room Gender Constraint Check
+      if (room.room_gender !== "Any" && room.room_gender !== "Mixed") {
+        occupants.forEach(occ => {
+          if (occ.gender_identity && occ.gender_identity !== room.room_gender) {
+            warnings.push({
+              type: "error",
+              text: `Gender mismatch: ${occ.first_name} is in a "${room.room_gender} Only" room.`
+            });
+          }
+        });
+      }
+
+      // 3. Occupant-Level Preference check (Require Same Gender)
+      const hasRequireSameGender = occupants.some(o => o.roommate_preference === "Require Same Gender");
+      if (hasRequireSameGender && uniqueGenders.length > 1) {
+        warnings.push({
+          type: "error",
+          text: "Critical Rule: Room contains mixed genders when someone requires a same-gender roommate."
+        });
+      }
+
+      // 4. Occupant-Level Preference check (Prefer Same Gender)
+      const hasPreferSameGender = occupants.some(o => o.roommate_preference === "Prefer Same Gender");
+      if (!hasRequireSameGender && hasPreferSameGender && uniqueGenders.length > 1) {
+        warnings.push({
+          type: "warning",
+          text: "Preference Warning: Room contains mixed genders when someone prefers a same-gender roommate."
+        });
+      }
+
+      // 5. Roommate Request matches
+      occupants.forEach(occ => {
+        if (occ.identified_roommate) {
+          const reqStatus = checkRoommateRequestStatus(occ);
+          
+          if (!reqStatus.found) {
+            warnings.push({
+              type: "warning",
+              text: `${occ.first_name} requested roommate "${occ.identified_roommate}", but they are not registered for lodging.`
+            });
+          } else if (reqStatus.roommateRoomId !== room.id) {
+            // Roommate is not in this room
+            const assignedRoom = allRooms.find(r => r.id === reqStatus.roommateRoomId);
+            const location = assignedRoom ? `assigned to "${assignedRoom.name}"` : "unassigned";
+            warnings.push({
+              type: "warning",
+              text: `${occ.first_name} requested roommate "${occ.identified_roommate}", but they are currently ${location}.`
+            });
+          } else if (reqStatus.found && reqStatus.roommateRoomId === room.id && !reqStatus.mutual) {
+            // Roommates are in same room, but not mutual
+            warnings.push({
+              type: "warning",
+              text: `One-sided request: ${occ.first_name} requested ${occ.identified_roommate}, but they did not list ${occ.first_name} in return.`
+            });
+          }
+        }
+      });
+
+      return { warnings };
+    }
+
+    // Drag & Drop handlers
+    function dragStart(e, registrantId) {
+      draggedRegistrantId = registrantId;
+      e.dataTransfer.setData("text/plain", registrantId);
+      
+      // Visual feedback
+      const cards = document.querySelectorAll(`[draggable="true"]`);
+      cards.forEach(card => {
+        if (card.innerText.includes(registrantId)) {
+          card.classList.add("dragging");
+        }
+      });
+
+      // Highlight drop zones
+      document.getElementById("unassigned-sidebar").style.border = "2px dashed #f58025";
+    }
+
+    function dragEnd(e) {
+      draggedRegistrantId = null;
+      document.querySelectorAll(".registrant-card, .occupant-item").forEach(c => c.classList.remove("dragging"));
+      document.getElementById("unassigned-sidebar").style.border = "";
+      document.getElementById("unassigned-sidebar").classList.remove("dragover");
+      document.querySelectorAll(".room-card").forEach(r => {
+        r.classList.remove("dragover");
+      });
+    }
+
+    function allowDrop(e) {
+      e.preventDefault();
+      const roomCard = e.currentTarget;
+      roomCard.classList.add("dragover");
+    }
+
+    function dragLeaveRoom(e) {
+      e.currentTarget.classList.remove("dragover");
+    }
+
+    function dragLeaveSidebar(e) {
+      e.currentTarget.classList.remove("dragover");
+    }
+
+    async function dropToRoom(e, roomId) {
+      e.preventDefault();
+      e.currentTarget.classList.remove("dragover");
+      
+      const registrantId = e.dataTransfer.getData("text/plain") || draggedRegistrantId;
+      if (!registrantId) return;
+
+      const room = allRooms.find(r => r.id === roomId);
+      if (!room) return;
+
+      // Check client-side capacity warning (backend also checks but let's be nice)
+      const currentOccupants = allRegistrants.filter(r => r.room_id === roomId).length;
+      
+      // If moving within the same room, do nothing
+      const registrant = allRegistrants.find(r => r.id === registrantId);
+      if (registrant && registrant.room_id === roomId) {
+        return;
+      }
+
+      if (currentOccupants >= room.capacity) {
+        alert("This room is already at full capacity. Unassign someone first or book a larger room.");
+        return;
+      }
+
+      await assignRegistrantToRoom(registrantId, roomId);
+    }
+
+    async function dropToUnassigned(e) {
+      e.preventDefault();
+      e.currentTarget.classList.remove("dragover");
+      
+      const registrantId = e.dataTransfer.getData("text/plain") || draggedRegistrantId;
+      if (!registrantId) return;
+
+      // If already unassigned, do nothing
+      const registrant = allRegistrants.find(r => r.id === registrantId);
+      if (registrant && !registrant.room_id) {
+        return;
+      }
+
+      await assignRegistrantToRoom(registrantId, null);
+    }
+
+    // API calls
+    async function assignRegistrantToRoom(registrantId, roomId) {
+      try {
+        const response = await fetch("/api/admin/rooms/assign", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            registrant_id: registrantId,
+            room_id: roomId
+          })
+        });
+
+        if (!response.ok) {
+          const errData = await response.json();
+          throw new Error(errData.detail || "Failed to update room assignment.");
+        }
+
+        // Optimistic UI updates or fetch fresh state
+        const registrant = allRegistrants.find(r => r.id === registrantId);
+        if (registrant) {
+          registrant.room_id = roomId;
+        }
+
+        calculateStatsAndRender();
+      } catch (err) {
+        console.error("Assignment error:", err);
+        alert(`Error assigning: ${err.message}`);
+        fetchData(); // Reset UI state on error
+      }
+    }
+
+    async function quickAssignRegistrant(registrantId, roomId) {
+      if (!roomId) return;
+      await assignRegistrantToRoom(registrantId, roomId);
+    }
+
+    async function unassignRegistrant(registrantId) {
+      await assignRegistrantToRoom(registrantId, null);
+    }
+
+    async function createRoom(e) {
+      e.preventDefault();
+      const name = document.getElementById("room-name").value.trim();
+      const capacity = parseInt(document.getElementById("room-capacity").value);
+      const room_gender = document.getElementById("room-gender").value;
+
+      try {
+        const response = await fetch("/api/admin/rooms", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            name: name,
+            capacity: capacity,
+            room_gender: room_gender
+          })
+        });
+
+        if (!response.ok) {
+          const errData = await response.json();
+          throw new Error(errData.detail || "Failed to create room.");
+        }
+
+        // Close modal
+        document.getElementById("create-room-modal").classList.remove("show");
+        
+        // Re-fetch database state
+        await fetchData();
+      } catch (err) {
+        console.error("Create room error:", err);
+        alert(`Could not book room: ${err.message}`);
+      }
+    }
+
+    async function deleteRoom(roomId, roomName) {
+      if (!confirm(`Are you sure you want to delete "${roomName}"? Any occupants in this room will be returned to the unassigned pool.`)) {
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/admin/rooms/${roomId}`, {
+          method: "DELETE"
+        });
+
+        if (!response.ok) {
+          const errData = await response.json();
+          throw new Error(errData.detail || "Failed to delete room.");
+        }
+
+        // Re-fetch database state
+        await fetchData();
+      } catch (err) {
+        console.error("Delete room error:", err);
+        alert(`Could not delete room: ${err.message}`);
+      }
+    }
+
+    // Modal select attendee click mechanism
+    let activeSelectRoomId = null;
+    function openSelectAttendeeModal(roomId, roomName) {
+      activeSelectRoomId = roomId;
+      document.getElementById("assign-target-room-name").innerText = roomName;
+      document.getElementById("modal-search-attendee").value = "";
+      
+      filterModalAttendeeList();
+      document.getElementById("select-attendee-modal").classList.add("show");
+    }
+
+    function filterModalAttendeeList() {
+      const search = document.getElementById("modal-search-attendee").value.toLowerCase().trim();
+      
+      const unassigned = allRegistrants.filter(r => {
+        const isUnassigned = !r.room_id;
+        const name = `${r.first_name || ""} ${r.last_name || ""}`.toLowerCase();
+        return isUnassigned && (!search || name.includes(search));
+      });
+
+      const listContainer = document.getElementById("modal-attendee-list");
+      if (unassigned.length === 0) {
+        listContainer.innerHTML = `<div class="text-center text-muted py-3">No matching unassigned attendees.</div>`;
+        return;
+      }
+
+      listContainer.innerHTML = unassigned.map(r => `
+        <div class="d-flex justify-content-between align-items-center p-2 mb-1 border-bottom" style="font-size:0.85rem;">
+          <div>
+            <strong>${escapeHtml(r.first_name)} ${escapeHtml(r.last_name)}</strong>
+            <span class="badge bg-secondary ml-1" style="font-size:0.65rem;">${escapeHtml(r.gender_identity || "Unspecified")}</span>
+          </div>
+          <button class="btn btn-sm btn-outline-primary py-0 px-2" onclick="selectModalAttendee('${r.id}')">Select</button>
+        </div>
+      `).join('');
+    }
+
+    async function selectModalAttendee(registrantId) {
+      if (!activeSelectRoomId) return;
+      document.getElementById("select-attendee-modal").classList.remove("show");
+      await assignRegistrantToRoom(registrantId, activeSelectRoomId);
+      activeSelectRoomId = null;
+    }
+
+    // Helper functions
+    function escapeHtml(str) {
+      if (!str) return "";
+      return str
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+  </script>
+</body>
+</html>
