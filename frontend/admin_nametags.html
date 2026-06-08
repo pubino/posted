@@ -571,6 +571,17 @@
         }
         registrants = await response.json();
         
+        // Normalize affiliation for Princeton emails
+        registrants.forEach(r => {
+          const email = (r.email_address || "").toLowerCase().trim();
+          if (email.endsWith("princeton.edu")) {
+            const org = (r.home_institution_or_organization || "").trim().toLowerCase();
+            if (!org || org === "n/a" || org === "na" || org === "none" || org === "null") {
+              r.home_institution_or_organization = "Princeton University";
+            }
+          }
+        });
+        
         // Add local select flag to each registrant
         registrants.forEach(r => r.selected = true);
 

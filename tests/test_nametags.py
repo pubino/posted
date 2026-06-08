@@ -146,3 +146,74 @@ def test_logo_upload(client):
     # Clean up uploaded file
     if os.path.exists("frontend/static/images/badge_primary_custom.png"):
         os.remove("frontend/static/images/badge_primary_custom.png")
+
+
+def test_nametags_webhook_princeton_affiliation_normalization(client, db_session):
+    # Test normalization of empty / N/A affiliation for princeton.edu email
+    payload = {
+        "email_address": "professor@princeton.edu",
+        "first_name": "William",
+        "last_name": "Massey",
+        "home_institution_or_organization": "N/A",
+        "attendee_status": "Attendee",
+        "sid": 9999,
+        "serial": 88
+    }
+
+    response = client.post(
+        "/api/nametags-webhook",
+        json={"data": payload},
+        headers={"X-Drupal-Webhook-Token": "test_webhook_token"}
+    )
+    assert response.status_code == status.HTTP_200_OK
+
+    db_session.expire_all()
+    reg = db_session.query(Registrant).filter(Registrant.email_address == "professor@princeton.edu").first()
+    assert reg is not None
+    assert reg.home_institution_or_organization == "Princeton University"
+
+    # Test normalization of empty/missing affiliation for princeton.edu email
+    payload_empty = {
+        "email_address": "student@princeton.edu",
+        "first_name": "Jane",
+        "last_name": "Doe",
+        "home_institution_or_organization": "",
+        "attendee_status": "Attendee",
+        "sid": 9998,
+        "serial": 87
+    }
+
+    response = client.post(
+        "/api/nametags-webhook",
+        json={"data": payload_empty},
+        headers={"X-Drupal-Webhook-Token": "test_webhook_token"}
+    )
+    assert response.status_code == status.HTTP_200_OK
+
+    db_session.expire_all()
+    reg_empty = db_session.query(Registrant).filter(Registrant.email_address == "student@princeton.edu").first()
+    assert reg_empty is not None
+    assert reg_empty.home_institution_or_organization == "Princeton University"
+
+    # Test non-princeton.edu email with N/A affiliation (should NOT be normalized)
+    payload_other = {
+        "email_address": "other@harvard.edu",
+        "first_name": "John",
+        "last_name": "Harvard",
+        "home_institution_or_organization": "N/A",
+        "attendee_status": "Attendee",
+        "sid": 9997,
+        "serial": 86
+    }
+
+    response = client.post(
+        "/api/nametags-webhook",
+        json={"data": payload_other},
+        headers={"X-Drupal-Webhook-Token": "test_webhook_token"}
+    )
+    assert response.status_code == status.HTTP_200_OK
+
+    db_session.expire_all()
+    reg_other = db_session.query(Registrant).filter(Registrant.email_address == "other@harvard.edu").first()
+    assert reg_other is not None
+    assert reg_other.home_institution_or_organization == "N/A"

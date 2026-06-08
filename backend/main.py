@@ -251,13 +251,20 @@ async def nametags_webhook(
             detail="email_address is required."
         )
 
+    affiliation = payload.home_institution_or_organization
+    email_lower = payload.email_address.strip().lower()
+    if email_lower.endswith("princeton.edu"):
+        aff_clean = (affiliation or "").strip().lower()
+        if not aff_clean or aff_clean in ("n/a", "na", "none", "null"):
+            affiliation = "Princeton University"
+
     existing = db.query(Registrant).filter(Registrant.email_address == payload.email_address).first()
     
     if existing:
         logger.info(f"Updating registrant: {payload.email_address}")
         existing.first_name = payload.first_name or existing.first_name
         existing.last_name = payload.last_name or existing.last_name
-        existing.home_institution_or_organization = payload.home_institution_or_organization or existing.home_institution_or_organization
+        existing.home_institution_or_organization = affiliation or existing.home_institution_or_organization
         existing.attendee_status = payload.attendee_status or existing.attendee_status
         existing.student = payload.student or existing.student
         existing.t_shirt_size = payload.t_shirt_size or existing.t_shirt_size
@@ -280,7 +287,7 @@ async def nametags_webhook(
             email_address=payload.email_address,
             first_name=payload.first_name,
             last_name=payload.last_name,
-            home_institution_or_organization=payload.home_institution_or_organization,
+            home_institution_or_organization=affiliation,
             attendee_status=payload.attendee_status,
             student=payload.student,
             t_shirt_size=payload.t_shirt_size,
@@ -544,6 +551,10 @@ async def create_write_in_registrant(
         
         existing.lodging = "Yes"
         existing.is_write_in = True
+        if email_clean.endswith("princeton.edu"):
+            aff_clean = (existing.home_institution_or_organization or "").strip().lower()
+            if not aff_clean or aff_clean in ("n/a", "na", "none", "null"):
+                existing.home_institution_or_organization = "Princeton University"
         if payload.gender_identity:
             existing.gender_identity = payload.gender_identity
         if payload.roommate_preference:
@@ -554,11 +565,16 @@ async def create_write_in_registrant(
         db.refresh(existing)
         return existing
         
+    affiliation = None
+    if email_clean.endswith("princeton.edu"):
+        affiliation = "Princeton University"
+
     new_reg = Registrant(
         id=str(uuid.uuid4()),
         email_address=email_clean,
         first_name=payload.first_name.strip(),
         last_name=payload.last_name.strip(),
+        home_institution_or_organization=affiliation,
         gender_identity=payload.gender_identity,
         roommate_preference=payload.roommate_preference or "No Preference",
         identified_roommate=payload.identified_roommate,
