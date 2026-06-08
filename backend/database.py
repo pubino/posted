@@ -53,7 +53,8 @@ def run_migrations():
             'gender_identity': 'VARCHAR',
             'roommate_preference': 'VARCHAR',
             'identified_roommate': 'VARCHAR',
-            'room_id': 'VARCHAR'
+            'room_id': 'VARCHAR',
+            'is_write_in': 'BOOLEAN DEFAULT 0'
         }
         
         for col_name, col_type in new_cols.items():

@@ -602,7 +602,10 @@
               <!-- LEFT COLUMN: UNASSIGNED ATTENDEES -->
               <div class="sidebar-unassigned" id="unassigned-sidebar" ondragover="allowDrop(event)" ondragleave="dragLeaveSidebar(event)" ondrop="dropToUnassigned(event)">
                 <div class="sidebar-header">
-                  <h4 style="font-family: 'Lora', serif; font-weight: 700; margin: 0; font-size: 1.2rem;">Unassigned Attendees</h4>
+                  <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h4 style="font-family: 'Lora', serif; font-weight: 700; margin: 0; font-size: 1.2rem;">Unassigned Attendees</h4>
+                    <button class="btn-brand-border" id="open-add-writein-btn" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;"><i class="fa-solid fa-plus"></i> Add Attendee</button>
+                  </div>
                   <p class="text-muted small mb-3">Drag attendees to a room, or use the drop-down to assign. Drag them back here to unassign.</p>
                   
                   <div class="mb-2">
@@ -686,6 +689,80 @@
           <button type="submit" class="btn-brand-filled">Create</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- ADD WRITE-IN / PROMOTER MODAL -->
+  <div class="custom-modal" id="add-writein-modal">
+    <div class="custom-modal-content" style="max-width: 550px;">
+      <button class="modal-close" id="close-writein-modal-btn">&times;</button>
+      <h3 style="font-family: 'Lora', serif; font-weight: 700; margin-bottom: 1.5rem;">Add Attendee to Lodging</h3>
+      
+      <!-- Tabs header -->
+      <div class="d-flex mb-3" style="border-bottom: 1px solid #dee2e6;">
+        <button class="w-50 text-center py-2" id="tab-promote-btn" style="border: none; border-bottom: 2px solid #f58025; background: none; font-weight: 600; color: #f58025; cursor: pointer;">Promote Registered</button>
+        <button class="w-50 text-center py-2" id="tab-manual-btn" style="border: none; border-bottom: 2px solid transparent; background: none; font-weight: 600; color: #6c757d; cursor: pointer;">New Manual Guest</button>
+      </div>
+      
+      <!-- Tab Contents -->
+      <!-- Tab 1: Promote -->
+      <div id="pane-promote" style="display: block;">
+        <p class="text-muted small">Promote an official registrant who did not originally request lodging during registration.</p>
+        <div class="form-group mb-3">
+          <label for="promote-search">Search Registrants</label>
+          <input type="text" id="promote-search" class="form-control" placeholder="Search by name or email..." />
+        </div>
+        <div id="promote-search-results" style="max-height: 200px; overflow-y: auto; border: 1px solid #eee; border-radius: 4px; padding: 0.5rem; background-color: #fafafa;">
+          <div class="text-center text-muted py-3 small">Start typing to search...</div>
+        </div>
+      </div>
+      
+      <!-- Tab 2: Manual Guest -->
+      <div id="pane-manual" style="display: none;">
+        <p class="text-muted small">Add a guest (speaker, sponsor, staff, etc.) who is not registered in the system.</p>
+        <form id="create-manual-guest-form">
+          <div class="row">
+            <div class="col-md-6 form-group">
+              <label for="manual-first-name">First Name</label>
+              <input type="text" id="manual-first-name" class="form-control" required />
+            </div>
+            <div class="col-md-6 form-group">
+              <label for="manual-last-name">Last Name</label>
+              <input type="text" id="manual-last-name" class="form-control" required />
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="manual-email">Email Address</label>
+            <input type="email" id="manual-email" class="form-control" required />
+          </div>
+          <div class="row">
+            <div class="col-md-6 form-group">
+              <label for="manual-gender">Gender Identity</label>
+              <select id="manual-gender" class="form-select">
+                <option value="Prefer not to say">Prefer not to say</option>
+                <option value="Woman">Woman</option>
+                <option value="Man">Man</option>
+                <option value="Non-binary">Non-binary</option>
+              </select>
+            </div>
+            <div class="col-md-6 form-group">
+              <label for="manual-roommate-pref">Roommate Preference</label>
+              <select id="manual-roommate-pref" class="form-select">
+                <option value="No Preference">No Preference</option>
+                <option value="Require Same Gender">Require Same Gender</option>
+                <option value="Prefer Same Gender">Prefer Same Gender</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="manual-roommate-name">Identified Roommate (Optional)</label>
+            <input type="text" id="manual-roommate-name" class="form-control" placeholder="Full name of roommate request..." />
+          </div>
+          <div class="text-end mt-4">
+            <button type="submit" class="btn-brand-filled">Create & Add</button>
+          </div>
+        </form>
+      </div>
     </div>
   </div>
 
@@ -808,6 +885,47 @@
         document.getElementById("select-attendee-modal").classList.remove("show");
       });
       document.getElementById("modal-search-attendee").addEventListener("input", filterModalAttendeeList);
+
+      // Add Write-in modal handlers
+      const writeinModal = document.getElementById("add-writein-modal");
+      document.getElementById("open-add-writein-btn").addEventListener("click", () => {
+        document.getElementById("create-manual-guest-form").reset();
+        document.getElementById("promote-search").value = "";
+        document.getElementById("promote-search-results").innerHTML = '<div class="text-center text-muted py-3 small">Start typing to search...</div>';
+        document.getElementById("tab-promote-btn").click();
+        fetchNonLodgingRegistrants();
+        writeinModal.classList.add("show");
+      });
+      document.getElementById("close-writein-modal-btn").addEventListener("click", () => {
+        writeinModal.classList.remove("show");
+      });
+
+      // Tab switching in Add Attendee modal
+      const tabPromoteBtn = document.getElementById("tab-promote-btn");
+      const tabManualBtn = document.getElementById("tab-manual-btn");
+      const panePromote = document.getElementById("pane-promote");
+      const paneManual = document.getElementById("pane-manual");
+
+      tabPromoteBtn.addEventListener("click", () => {
+        tabPromoteBtn.style.color = "#f58025";
+        tabPromoteBtn.style.borderBottomColor = "#f58025";
+        tabManualBtn.style.color = "#6c757d";
+        tabManualBtn.style.borderBottomColor = "transparent";
+        panePromote.style.display = "block";
+        paneManual.style.display = "none";
+      });
+
+      tabManualBtn.addEventListener("click", () => {
+        tabManualBtn.style.color = "#f58025";
+        tabManualBtn.style.borderBottomColor = "#f58025";
+        tabPromoteBtn.style.color = "#6c757d";
+        tabPromoteBtn.style.borderBottomColor = "transparent";
+        paneManual.style.display = "block";
+        panePromote.style.display = "none";
+      });
+
+      document.getElementById("promote-search").addEventListener("input", filterPromoteSearch);
+      document.getElementById("create-manual-guest-form").addEventListener("submit", createManualGuestSubmit);
     });
 
     async function fetchData() {
@@ -903,7 +1021,14 @@
 
         return `
           <div class="registrant-card" draggable="true" ondragstart="dragStart(event, '${r.id}')" ondragend="dragEnd(event)">
-            <div class="name">${escapeHtml(r.first_name)} ${escapeHtml(r.last_name)}</div>
+            <div class="d-flex justify-content-between align-items-start">
+              <div class="name">${escapeHtml(r.first_name)} ${escapeHtml(r.last_name)}</div>
+              ${r.is_write_in ? `
+                <button onclick="removeWriteIn('${r.id}', '${escapeHtml(r.first_name)} ${escapeHtml(r.last_name)}', event)" title="Remove write-in from lodging" style="border: none; background: transparent; color: #dc3545; padding: 0 0 0 0.5rem; font-size: 0.85rem; cursor: pointer;">
+                  <i class="fa-solid fa-trash-can"></i>
+                </button>
+              ` : ''}
+            </div>
             <div class="institution">${escapeHtml(r.home_institution_or_organization || "No Affiliation")}</div>
             
             <div class="badges-row">
@@ -1490,6 +1615,130 @@
       } catch (err) {
         console.error("Save details error:", err);
         alert(`Could not save room details: ${err.message}`);
+      }
+    }
+
+    let nonLodgingRegistrants = [];
+
+    async function fetchNonLodgingRegistrants() {
+      try {
+        const response = await fetch("/api/admin/registrants/non-lodging");
+        if (!response.ok) {
+          throw new Error("Failed to fetch non-lodging registrants.");
+        }
+        nonLodgingRegistrants = await response.json();
+        filterPromoteSearch();
+      } catch (err) {
+        console.error("Error fetching non-lodging registrants:", err);
+      }
+    }
+
+    function filterPromoteSearch() {
+      const search = document.getElementById("promote-search").value.toLowerCase().trim();
+      const resultsContainer = document.getElementById("promote-search-results");
+      
+      const filtered = nonLodgingRegistrants.filter(r => {
+        const name = `${r.first_name || ""} ${r.last_name || ""}`.toLowerCase();
+        const email = (r.email_address || "").toLowerCase();
+        return name.includes(search) || email.includes(search);
+      });
+
+      if (filtered.length === 0) {
+        resultsContainer.innerHTML = '<div class="text-center text-muted py-3 small">No matching registrants found.</div>';
+        return;
+      }
+
+      resultsContainer.innerHTML = filtered.map(r => `
+        <div class="d-flex justify-content-between align-items-center p-2 mb-1 border-bottom bg-white" style="font-size:0.85rem;">
+          <div>
+            <strong>${escapeHtml(r.first_name)} ${escapeHtml(r.last_name)}</strong>
+            <div class="text-muted" style="font-size: 0.75rem;">${escapeHtml(r.email_address)} (${escapeHtml(r.gender_identity || "Unspecified")})</div>
+          </div>
+          <button class="btn btn-sm btn-outline-primary py-0 px-2" onclick="promoteRegistrant('${r.id}')">Promote</button>
+        </div>
+      `).join('');
+    }
+
+    async function promoteRegistrant(registrantId) {
+      try {
+        const response = await fetch(`/api/admin/registrants/${registrantId}/lodging`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ needs_lodging: true })
+        });
+
+        if (!response.ok) {
+          const errData = await response.json();
+          throw new Error(errData.detail || "Failed to promote registrant.");
+        }
+
+        document.getElementById("add-writein-modal").classList.remove("show");
+        await fetchData();
+      } catch (err) {
+        console.error("Promote registrant error:", err);
+        alert(`Could not promote attendee: ${err.message}`);
+      }
+    }
+
+    async function createManualGuestSubmit(e) {
+      e.preventDefault();
+      
+      const payload = {
+        first_name: document.getElementById("manual-first-name").value.trim(),
+        last_name: document.getElementById("manual-last-name").value.trim(),
+        email_address: document.getElementById("manual-email").value.trim(),
+        gender_identity: document.getElementById("manual-gender").value,
+        roommate_preference: document.getElementById("manual-roommate-pref").value,
+        identified_roommate: document.getElementById("manual-roommate-name").value.trim() || null
+      };
+
+      try {
+        const response = await fetch("/api/admin/lodging/registrants", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+          const errData = await response.json();
+          throw new Error(errData.detail || "Failed to create manual guest.");
+        }
+
+        document.getElementById("add-writein-modal").classList.remove("show");
+        await fetchData();
+      } catch (err) {
+        console.error("Create manual guest error:", err);
+        alert(`Could not add manual guest: ${err.message}`);
+      }
+    }
+
+    async function removeWriteIn(registrantId, fullName, e) {
+      if (e) {
+        e.stopPropagation();
+      }
+
+      if (!confirm(`Are you sure you want to remove "${fullName}" from lodging?`)) {
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/admin/lodging/registrants/${registrantId}`, {
+          method: "DELETE"
+        });
+
+        if (!response.ok) {
+          const errData = await response.json();
+          throw new Error(errData.detail || "Failed to remove write-in.");
+        }
+
+        await fetchData();
+      } catch (err) {
+        console.error("Remove write-in error:", err);
+        alert(`Could not remove write-in: ${err.message}`);
       }
     }
 

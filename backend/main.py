@@ -13,7 +13,7 @@ import shutil
 from backend.config import settings
 from backend.database import get_db, engine, Base, run_migrations
 from backend.models import Presenter, Registrant, Room
-from backend.schemas import DrupalWebhookPayload, PresenterResponse, NametagsWebhookPayload, RegistrantResponse, RoomResponse, RoomCreate, RoomAssignmentPayload, RoomUpdate
+from backend.schemas import DrupalWebhookPayload, PresenterResponse, NametagsWebhookPayload, RegistrantResponse, RoomResponse, RoomCreate, RoomAssignmentPayload, RoomUpdate, ToggleLodgingPayload, WriteInCreate
 from backend.download_assets import download_assets
 
 # Setup Logging
@@ -268,6 +268,7 @@ async def nametags_webhook(
         existing.identified_roommate = payload.identified_roommate or existing.identified_roommate
         existing.drupal_sid = payload.sid or existing.drupal_sid
         existing.serial_number = payload.serial or existing.serial_number
+        existing.is_write_in = False
         existing.registered_at = datetime.datetime.utcnow()
         db.commit()
         db.refresh(existing)
@@ -509,3 +510,115 @@ async def list_admin_lodging_registrants(request: Request, db: Session = Depends
         (Registrant.lodging == "Yes") | (Registrant.lodging == "yes")
     ).order_by(Registrant.last_name.asc(), Registrant.first_name.asc()).all()
     return registrants
+
+
+@app.get("/api/admin/registrants/non-lodging", response_model=List[RegistrantResponse])
+async def list_admin_non_lodging_registrants(request: Request, db: Session = Depends(get_db)):
+    if not is_admin_authorized(request):
+        raise HTTPException(status_code=403, detail="Access Forbidden")
+    registrants = db.query(Registrant).filter(
+        (Registrant.lodging.is_(None)) | 
+        (~Registrant.lodging.in_(["Yes", "yes"]))
+    ).filter(
+        (Registrant.is_write_in.is_(None)) | 
+        (Registrant.is_write_in == False)
+    ).order_by(Registrant.last_name.asc(), Registrant.first_name.asc()).all()
+    return registrants
+
+
+@app.post("/api/admin/lodging/registrants", response_model=RegistrantResponse)
+async def create_write_in_registrant(
+    request: Request,
+    payload: WriteInCreate,
+    db: Session = Depends(get_db)
+):
+    if not is_admin_authorized(request):
+        raise HTTPException(status_code=403, detail="Access Forbidden")
+        
+    email_clean = payload.email_address.strip().lower()
+    existing = db.query(Registrant).filter(Registrant.email_address == email_clean).first()
+    
+    if existing:
+        if existing.lodging in ("Yes", "yes"):
+            raise HTTPException(status_code=400, detail="Attendee is already in the lodging planner.")
+        
+        existing.lodging = "Yes"
+        existing.is_write_in = True
+        if payload.gender_identity:
+            existing.gender_identity = payload.gender_identity
+        if payload.roommate_preference:
+            existing.roommate_preference = payload.roommate_preference
+        if payload.identified_roommate:
+            existing.identified_roommate = payload.identified_roommate
+        db.commit()
+        db.refresh(existing)
+        return existing
+        
+    new_reg = Registrant(
+        id=str(uuid.uuid4()),
+        email_address=email_clean,
+        first_name=payload.first_name.strip(),
+        last_name=payload.last_name.strip(),
+        gender_identity=payload.gender_identity,
+        roommate_preference=payload.roommate_preference or "No Preference",
+        identified_roommate=payload.identified_roommate,
+        lodging="Yes",
+        is_write_in=True,
+        registered_at=datetime.datetime.utcnow()
+    )
+    db.add(new_reg)
+    db.commit()
+    db.refresh(new_reg)
+    return new_reg
+
+
+@app.patch("/api/admin/registrants/{registrant_id}/lodging", response_model=RegistrantResponse)
+async def toggle_registrant_lodging(
+    request: Request,
+    registrant_id: str,
+    payload: ToggleLodgingPayload,
+    db: Session = Depends(get_db)
+):
+    if not is_admin_authorized(request):
+        raise HTTPException(status_code=403, detail="Access Forbidden")
+        
+    registrant = db.query(Registrant).filter(Registrant.id == registrant_id).first()
+    if not registrant:
+        raise HTTPException(status_code=404, detail="Registrant not found")
+        
+    if payload.needs_lodging:
+        registrant.lodging = "Yes"
+        registrant.is_write_in = True
+    else:
+        registrant.lodging = "No"
+        registrant.is_write_in = False
+        registrant.room_id = None
+        
+    db.commit()
+    db.refresh(registrant)
+    return registrant
+
+
+@app.delete("/api/admin/lodging/registrants/{registrant_id}")
+async def delete_lodging_registrant(
+    request: Request,
+    registrant_id: str,
+    db: Session = Depends(get_db)
+):
+    if not is_admin_authorized(request):
+        raise HTTPException(status_code=403, detail="Access Forbidden")
+        
+    registrant = db.query(Registrant).filter(Registrant.id == registrant_id).first()
+    if not registrant:
+        raise HTTPException(status_code=404, detail="Registrant not found")
+        
+    if registrant.drupal_sid is None or registrant.drupal_sid == 0:
+        db.delete(registrant)
+        db.commit()
+        return {"status": "success", "action": "deleted", "message": "Manual write-in permanently deleted."}
+    else:
+        registrant.is_write_in = False
+        registrant.lodging = "No"
+        registrant.room_id = None
+        db.commit()
+        return {"status": "success", "action": "reverted", "message": "Official registrant reverted to non-lodging status."}

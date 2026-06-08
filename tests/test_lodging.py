@@ -276,3 +276,92 @@ def test_room_details_update(client, db_session):
     )
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert "already exists" in response.json()["detail"]
+
+
+def test_lodging_write_ins_and_promotions(client, db_session):
+    headers = {"X-MS-CLIENT-PRINCIPAL-NAME": "bino@princeton.edu"}
+
+    # 1. Create a webhook registrant (not requesting lodging)
+    webhook_reg = Registrant(
+        id="webhook-reg-1",
+        email_address="webhook@example.com",
+        first_name="Web",
+        last_name="Hook",
+        lodging="No",
+        drupal_sid=123,
+        serial_number=456,
+        is_write_in=False
+    )
+    db_session.add(webhook_reg)
+    db_session.commit()
+
+    # Verify they appear in non-lodging list
+    response = client.get("/api/admin/registrants/non-lodging", headers=headers)
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert len(data) >= 1
+    non_lodging_emails = [r["email_address"] for r in data]
+    assert "webhook@example.com" in non_lodging_emails
+
+    # 2. Promote them via PATCH
+    response = client.patch(
+        "/api/admin/registrants/webhook-reg-1/lodging",
+        json={"needs_lodging": True},
+        headers=headers
+    )
+    assert response.status_code == status.HTTP_200_OK
+    
+    db_session.expire_all()
+    reg_db = db_session.query(Registrant).filter(Registrant.id == "webhook-reg-1").first()
+    assert reg_db.lodging == "Yes"
+    assert reg_db.is_write_in is True
+
+    # 3. Create a manual guest write-in via POST
+    response = client.post(
+        "/api/admin/lodging/registrants",
+        json={
+            "first_name": "Manual",
+            "last_name": "Guest",
+            "email_address": "manual@example.com",
+            "gender_identity": "Man",
+            "roommate_preference": "Prefer Same Gender",
+            "identified_roommate": "Web Hook"
+        },
+        headers=headers
+    )
+    assert response.status_code == status.HTTP_200_OK
+    manual_data = response.json()
+    assert manual_data["is_write_in"] is True
+    assert manual_data["lodging"] == "Yes"
+    assert manual_data["drupal_sid"] is None
+    manual_id = manual_data["id"]
+
+    # 4. Verify both appear in lodging registrants list
+    response = client.get("/api/admin/lodging/registrants", headers=headers)
+    assert response.status_code == status.HTTP_200_OK
+    lodging_data = response.json()
+    lodging_emails = [r["email_address"] for r in lodging_data]
+    assert "webhook@example.com" in lodging_emails
+    assert "manual@example.com" in lodging_emails
+
+    # 5. Delete/Revert promoted registrant
+    response = client.delete(f"/api/admin/lodging/registrants/webhook-reg-1", headers=headers)
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["action"] == "reverted"
+
+    # Verify they still exist in database, but reverted
+    db_session.expire_all()
+    reg_db = db_session.query(Registrant).filter(Registrant.id == "webhook-reg-1").first()
+    assert reg_db is not None
+    assert reg_db.lodging == "No"
+    assert reg_db.is_write_in is False
+
+    # 6. Delete manual write-in
+    response = client.delete(f"/api/admin/lodging/registrants/{manual_id}", headers=headers)
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["action"] == "deleted"
+
+    # Verify they are permanently deleted from database
+    db_session.expire_all()
+    reg_db = db_session.query(Registrant).filter(Registrant.id == manual_id).first()
+    assert reg_db is None

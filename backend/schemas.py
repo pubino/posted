@@ -213,9 +213,23 @@ class RegistrantResponse(BaseModel):
     roommate_preference: Optional[str] = None
     identified_roommate: Optional[str] = None
     room_id: Optional[str] = None
+    is_write_in: bool = False
 
     class Config:
         from_attributes = True
+
+
+class ToggleLodgingPayload(BaseModel):
+    needs_lodging: bool
+
+
+class WriteInCreate(BaseModel):
+    first_name: str
+    last_name: str
+    email_address: str
+    gender_identity: Optional[str] = None
+    roommate_preference: Optional[str] = None
+    identified_roommate: Optional[str] = None
 
 
 class RoomResponse(BaseModel):

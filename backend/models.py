@@ -40,6 +40,7 @@ class Registrant(Base):
     roommate_preference = Column(String, nullable=True)
     identified_roommate = Column(String, nullable=True)
     room_id = Column(String, nullable=True)  # References rooms.id
+    is_write_in = Column(Boolean, default=False, nullable=False, server_default="0")
 
 class Room(Base):
     __tablename__ = "rooms"
