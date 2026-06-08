@@ -318,6 +318,18 @@ async def get_admin_nametags(request: Request):
     return HTMLResponse(content=content)
 
 
+@app.get("/admin/reimbursement")
+async def get_admin_reimbursement(request: Request):
+    if not is_admin_authorized(request):
+        principal_name = request.headers.get("X-MS-CLIENT-PRINCIPAL-NAME")
+        if (not principal_name or principal_name.strip().lower() == "anonymous") and os.getenv("ALLOW_LOCAL_DEV_ADMIN") != "true":
+            return RedirectResponse(url="/.auth/login/aad?post_login_redirect_uri=/admin/reimbursement")
+        raise HTTPException(status_code=403, detail="Access Forbidden: Unauthorized user principal.")
+    with open("frontend/admin_reimbursement.html", "r") as f:
+        content = f.read()
+    return HTMLResponse(content=content)
+
+
 @app.get("/api/admin/registrants", response_model=List[RegistrantResponse])
 async def list_admin_registrants(request: Request, db: Session = Depends(get_db)):
     if not is_admin_authorized(request):

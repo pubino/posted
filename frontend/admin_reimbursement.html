@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Reimbursement Link Generator | CAARMS 2026 Admin</title>
+
+  <!-- Typekit, Fonts & FontAwesome -->
+  <link rel="stylesheet" href="https://use.typekit.net/qss7gby.css" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Libre+Franklin:ital,wght@0,100..900;1,100..900&family=Lora:ital,wght@0,400..700;1,400..700&display=swap" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+  <!-- Downloaded Local Stylesheets -->
+  <link rel="stylesheet" href="/static/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="/static/css/base_styles.css" />
+  <link rel="stylesheet" href="/static/css/tiger_styles.css" />
+  <link rel="stylesheet" href="/static/css/align_header.css" />
+  <link rel="stylesheet" href="/static/css/site_title.css" />
+
+  <style>
+    body {
+      font-family: 'Libre Franklin', sans-serif;
+      background-color: #ffffff !important;
+      color: #2b2b2b;
+    }
+    .page-title {
+      font-family: 'Lora', serif;
+      color: #1a1a1a;
+      font-weight: 700;
+      margin-bottom: 2rem;
+      font-size: 2.5rem;
+      border-bottom: none !important;
+    }
+    .admin-container {
+      padding: 3rem 0;
+    }
+    
+    /* Control Box Styles */
+    .control-panel {
+      background: #fdfdfd;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02);
+    }
+    .control-title {
+      font-family: 'Lora', serif;
+      font-weight: 700;
+      font-size: 1.25rem;
+      color: #1a1a1a;
+      margin-bottom: 1rem;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 0.5rem;
+    }
+    
+    /* Sortable Headers */
+    .sortable-header {
+      cursor: pointer;
+      user-select: none;
+      position: relative;
+      padding-right: 24px !important;
+    }
+    .sortable-header:hover {
+      background-color: #f8f9fa;
+    }
+    .sort-icon {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 0.8rem;
+      color: #ccc;
+    }
+    .sortable-header.sorted-asc .sort-icon {
+      color: #f58025;
+    }
+    .sortable-header.sorted-desc .sort-icon {
+      color: #f58025;
+    }
+
+    .btn-brand-border {
+      border: 1px solid #ccc;
+      color: #333;
+      background-color: transparent;
+      padding: 0.5rem 1.25rem;
+      border-radius: 4px;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      text-decoration: none;
+      font-family: 'Libre Franklin', sans-serif;
+      transition: all 0.2s ease-in-out;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .btn-brand-border:hover {
+      border-color: #f58025;
+      color: #f58025;
+      text-decoration: none;
+      background-color: rgba(245, 128, 37, 0.02);
+    }
+  </style>
+</head>
+<body class="page-node content-type-ps-basic-page flavor1 fontset2 btn-v1 menu4 layout-block-padding-medium layout-above-section-spacing-none layout-below-section-spacing-medium">
+
+  <div class="dialog-off-canvas-main-canvas" data-off-canvas-main-canvas>
+    <div class="page page-container">
+      
+      <!-- HEADER REGION -->
+      <header role="banner" class="header region region-header" id="header">
+        <h1 class="sr-only sr-site-name">CAARMS 2026</h1>
+        
+        <div class="header-container container">
+          <div class="princeton-branding">
+            <div class="container">
+              <a href="http://www.princeton.edu" class="pu-logo" title="Princeton University">
+                <img src="/static/images/pu-logo.svg" alt="Princeton University" />
+              </a>
+            </div>
+          </div>
+
+          <div class="site-branding">
+            <div class="container">
+              <div class="row align-items-center">
+                <div class="col-auto">
+                  <a href="https://caarms.princeton.edu/" title="Home" rel="home" class="site-logo" tabindex="-1" aria-hidden="true">
+                    <img class="sizing-custom" src="/static/images/caarms_0.png" alt="Home" style="max-height: 80px;" />
+                  </a>
+                </div>
+                <div class="col">
+                  <div class="site-info">
+                    <div class="site-name">
+                      <a href="https://caarms.princeton.edu/" title="Home" rel="home">CAARMS 2026</a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- MAIN CONTENT SECTION -->
+      <main id="main-content" class="admin-container container">
+        <div class="row">
+          <div class="col-md-12">
+            
+            <h2 class="page-title">Reimbursement Link Generator</h2>
+
+            <!-- CONTROLS & FILTER BAR -->
+            <div class="control-panel">
+              <div class="control-title"><i class="fa-solid fa-sliders"></i> Search & Filters</div>
+              <div class="row g-3">
+                <div class="col-md-8">
+                  <label class="form-label font-weight-bold">Search Registrants</label>
+                  <input type="text" id="search-input" class="form-control" placeholder="Search by name, email, or institution..." />
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label font-weight-bold">Filter Status/Role</label>
+                  <select id="role-select" class="form-select">
+                    <option value="">All Roles</option>
+                    <option value="Speaker">Speakers</option>
+                    <option value="Organizer">Organizers</option>
+                    <option value="Attendee">Attendees</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- REGISTRANTS LISTING TABLE -->
+            <div class="control-panel">
+              <div class="control-title"><i class="fa-solid fa-users"></i> Registrants Listing</div>
+              <div class="table-responsive">
+                <table class="table table-hover" id="registrants-table">
+                  <thead>
+                    <tr>
+                      <th class="sortable-header" id="th-name">Name <i class="fa-solid fa-sort sort-icon"></i></th>
+                      <th class="sortable-header" id="th-email">Email <i class="fa-solid fa-sort sort-icon"></i></th>
+                      <th class="sortable-header" id="th-org">Affiliation / Institution <i class="fa-solid fa-sort sort-icon"></i></th>
+                      <th class="sortable-header" id="th-role">Role <i class="fa-solid fa-sort sort-icon"></i></th>
+                      <th style="width: 250px;">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <!-- Populated dynamically -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div style="margin-top: 2rem;">
+              <a href="https://caarms.princeton.edu/administrative-utilities" class="btn-brand-border"><i class="fa fa-arrow-left"></i> Back to Administrative Utilities</a>
+            </div>
+
+          </div>
+        </div>
+      </main>
+
+    </div>
+  </div>
+
+  <!-- Main JavaScript Logic -->
+  <script>
+    let registrants = [];
+    let currentSortColumn = "name";
+    let sortDirection = "asc";
+
+    document.addEventListener("DOMContentLoaded", () => {
+      fetchRegistrants();
+
+      document.getElementById("search-input").addEventListener("input", filterAndRenderTable);
+      document.getElementById("role-select").addEventListener("change", filterAndRenderTable);
+
+      document.getElementById("th-name").addEventListener("click", () => handleSort("name"));
+      document.getElementById("th-email").addEventListener("click", () => handleSort("email"));
+      document.getElementById("th-org").addEventListener("click", () => handleSort("org"));
+      document.getElementById("th-role").addEventListener("click", () => handleSort("role"));
+    });
+
+    async function fetchRegistrants() {
+      try {
+        const response = await fetch("/api/admin/registrants");
+        if (!response.ok) {
+          throw new Error("Failed to load registrants. Verify authentication.");
+        }
+        registrants = await response.json();
+        
+        // Normalize affiliation for Princeton emails (consistent with Nametag UI)
+        registrants.forEach(r => {
+          const email = (r.email_address || "").toLowerCase().trim();
+          if (email.endsWith("princeton.edu")) {
+            const org = (r.home_institution_or_organization || "").trim().toLowerCase();
+            if (!org || org === "n/a" || org === "na" || org === "none" || org === "null") {
+              r.home_institution_or_organization = "Princeton University";
+            }
+          }
+        });
+
+        sortRegistrantsArray();
+        updateSortHeadersUI();
+        filterAndRenderTable();
+      } catch (err) {
+        console.error("Error fetching registrants:", err);
+        alert("Access Denied or Database error. Please make sure you are logged in via Easy Auth.");
+      }
+    }
+
+    function filterAndRenderTable() {
+      const searchVal = document.getElementById("search-input").value.toLowerCase().trim();
+      const roleVal = document.getElementById("role-select").value;
+
+      const filtered = registrants.filter(r => {
+        const name = `${r.first_name || ""} ${r.last_name || ""}`.toLowerCase();
+        const email = (r.email_address || "").toLowerCase();
+        const org = (r.home_institution_or_organization || "").toLowerCase();
+
+        const matchSearch = name.includes(searchVal) || email.includes(searchVal) || org.includes(searchVal);
+        const matchRole = !roleVal || r.attendee_status === roleVal;
+
+        return matchSearch && matchRole;
+      });
+
+      const tbody = document.querySelector("#registrants-table tbody");
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-4">No matching registrants found.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(r => {
+        const fullName = `${r.first_name || ""} ${r.last_name || ""}`.trim();
+        return `
+          <tr>
+            <td><strong>${escapeHtml(fullName)}</strong></td>
+            <td>${escapeHtml(r.email_address || "N/A")}</td>
+            <td>${escapeHtml(r.home_institution_or_organization || "N/A")}</td>
+            <td><span class="badge bg-secondary">${escapeHtml(r.attendee_status || "Attendee")}</span></td>
+            <td>
+              <button class="btn btn-sm btn-brand-border" onclick="copyReimbursementLink(this, '${escapeHtml(fullName)}', '${escapeHtml(r.email_address || "")}')">
+                <i class="fa-solid fa-copy"></i> Copy Link
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    async function copyReimbursementLink(button, name, email) {
+      const baseUrl = "https://orfe.princeton.edu/forms/reimbursement#Business_Purpose=CAARMS%202026&Departure_date=2026-06-28&Return_Date=2026-07-01";
+      const signerName = encodeURIComponent(name);
+      const signerEmail = encodeURIComponent(email || "");
+      const fullUrl = `${baseUrl}&Signer_name=${signerName}&Signer_email=${signerEmail}`;
+      
+      try {
+        await navigator.clipboard.writeText(fullUrl);
+        
+        const originalHtml = button.innerHTML;
+        button.innerHTML = '<i class="fa-solid fa-check"></i> Copied!';
+        button.style.backgroundColor = "#28a745";
+        button.style.color = "#fff";
+        button.style.borderColor = "#28a745";
+        
+        setTimeout(() => {
+          button.innerHTML = originalHtml;
+          button.style.backgroundColor = "";
+          button.style.color = "";
+          button.style.borderColor = "";
+        }, 2000);
+      } catch (err) {
+        console.error("Failed to copy link:", err);
+        alert("Could not copy link to clipboard: " + err);
+      }
+    }
+
+    function handleSort(column) {
+      if (currentSortColumn === column) {
+        sortDirection = sortDirection === "asc" ? "desc" : "asc";
+      } else {
+        currentSortColumn = column;
+        sortDirection = "asc";
+      }
+
+      sortRegistrantsArray();
+      updateSortHeadersUI();
+      filterAndRenderTable();
+    }
+
+    function sortRegistrantsArray() {
+      registrants.sort((a, b) => {
+        let valA = "", valB = "";
+
+        if (currentSortColumn === "name") {
+          valA = `${a.last_name || ""} ${a.first_name || ""}`.toLowerCase().trim();
+          valB = `${b.last_name || ""} ${b.first_name || ""}`.toLowerCase().trim();
+        } else if (currentSortColumn === "email") {
+          valA = (a.email_address || "").toLowerCase().trim();
+          valB = (b.email_address || "").toLowerCase().trim();
+        } else if (currentSortColumn === "org") {
+          valA = (a.home_institution_or_organization || "").toLowerCase().trim();
+          valB = (b.home_institution_or_organization || "").toLowerCase().trim();
+        } else if (currentSortColumn === "role") {
+          valA = (a.attendee_status || "").toLowerCase().trim();
+          valB = (b.attendee_status || "").toLowerCase().trim();
+        }
+
+        if (valA < valB) return sortDirection === "asc" ? -1 : 1;
+        if (valA > valB) return sortDirection === "asc" ? 1 : -1;
+        return 0;
+      });
+    }
+
+    function updateSortHeadersUI() {
+      const headers = ["name", "email", "org", "role"];
+      headers.forEach(h => {
+        const el = document.getElementById(`th-${h}`);
+        if (!el) return;
+        el.classList.remove("sorted-asc", "sorted-desc");
+        const icon = el.querySelector(".sort-icon");
+        if (icon) {
+          icon.className = "fa-solid fa-sort sort-icon";
+        }
+      });
+
+      const activeHeader = document.getElementById(`th-${currentSortColumn}`);
+      if (activeHeader) {
+        activeHeader.classList.add(sortDirection === "asc" ? "sorted-asc" : "sorted-desc");
+        const icon = activeHeader.querySelector(".sort-icon");
+        if (icon) {
+          icon.className = sortDirection === "asc" 
+            ? "fa-solid fa-sort-up sort-icon" 
+            : "fa-solid fa-sort-down sort-icon";
+        }
+      }
+    }
+
+    function escapeHtml(str) {
+      if (!str) return "";
+      return str
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+  </script>
+</body>
+</html>
