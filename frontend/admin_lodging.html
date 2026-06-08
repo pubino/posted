@@ -1024,7 +1024,7 @@
             <div class="d-flex justify-content-between align-items-start">
               <div class="name">${escapeHtml(r.first_name)} ${escapeHtml(r.last_name)}</div>
               ${r.is_write_in ? `
-                <button onclick="removeWriteIn('${r.id}', '${escapeHtml(r.first_name)} ${escapeHtml(r.last_name)}', event)" title="Remove write-in from lodging" style="border: none; background: transparent; color: #dc3545; padding: 0 0 0 0.5rem; font-size: 0.85rem; cursor: pointer;">
+                <button onclick="removeWriteIn('${r.id}', event)" title="Remove write-in from lodging" style="border: none; background: transparent; color: #dc3545; padding: 0 0 0 0.5rem; font-size: 0.85rem; cursor: pointer;">
                   <i class="fa-solid fa-trash-can"></i>
                 </button>
               ` : ''}
@@ -1141,7 +1141,7 @@
             `;
           } else {
             return `
-              <div class="bed-slot" onclick="openSelectAttendeeModal('${room.id}', '${room.name}')" title="Click to assign attendee to this slot">
+              <div class="bed-slot" onclick="openSelectAttendeeModal('${room.id}')" title="Click to assign attendee to this slot">
                 <i class="fa-solid fa-bed mr-2"></i> Empty Bed (Click to Assign)
               </div>
             `;
@@ -1163,10 +1163,10 @@
                 </div>
               </div>
               <div class="room-actions">
-                <button class="unassign-btn mr-2" onclick="openRoomDetailsModal('${room.id}', '${escapeHtml(room.name)}', '${escapeHtml(room.held_by || "")}', '${escapeHtml(room.comments || "")}', ${room.capacity}, '${escapeHtml(room.room_gender)}', ${occupants.length === 0})" title="Room Details & Notes">
+                <button class="unassign-btn mr-2" onclick="openRoomDetailsModal('${room.id}')" title="Room Details & Notes">
                   <i class="fa-solid fa-circle-info"></i>
                 </button>
-                <button class="room-delete-btn" onclick="deleteRoom('${room.id}', '${escapeHtml(room.name)}')" title="Delete room and unassign attendees">
+                <button class="room-delete-btn" onclick="deleteRoom('${room.id}')" title="Delete room and unassign attendees">
                   <i class="fa-solid fa-trash-can"></i>
                 </button>
               </div>
@@ -1467,8 +1467,10 @@
       }
     }
 
-    async function deleteRoom(roomId, roomName) {
-      if (!confirm(`Are you sure you want to delete "${roomName}"? Any occupants in this room will be returned to the unassigned pool.`)) {
+    async function deleteRoom(roomId) {
+      const room = allRooms.find(r => r.id === roomId);
+      if (!room) return;
+      if (!confirm(`Are you sure you want to delete "${room.name}"? Any occupants in this room will be returned to the unassigned pool.`)) {
         return;
       }
 
@@ -1492,9 +1494,10 @@
 
     // Modal select attendee click mechanism
     let activeSelectRoomId = null;
-    function openSelectAttendeeModal(roomId, roomName) {
+    function openSelectAttendeeModal(roomId) {
       activeSelectRoomId = roomId;
-      document.getElementById("assign-target-room-name").innerText = roomName;
+      const room = allRooms.find(r => r.id === roomId);
+      document.getElementById("assign-target-room-name").innerText = room ? room.name : "";
       document.getElementById("modal-search-attendee").value = "";
       
       filterModalAttendeeList();
@@ -1534,11 +1537,17 @@
       activeSelectRoomId = null;
     }
 
-    function openRoomDetailsModal(roomId, roomName, heldBy, comments, capacity, roomGender, isUnoccupied) {
+    function openRoomDetailsModal(roomId) {
+      const room = allRooms.find(r => r.id === roomId);
+      if (!room) return;
+      
+      const occupantsCount = allRegistrants.filter(r => r.room_id === roomId).length;
+      const isUnoccupied = occupantsCount === 0;
+
       document.getElementById("details-room-id").value = roomId;
-      document.getElementById("details-room-name").innerText = roomName;
-      document.getElementById("details-held-by").value = heldBy;
-      document.getElementById("details-comments").value = comments;
+      document.getElementById("details-room-name").innerText = room.name;
+      document.getElementById("details-held-by").value = room.held_by || "";
+      document.getElementById("details-comments").value = room.comments || "";
 
       const unoccupiedFields = document.getElementById("details-unoccupied-fields");
       const occupiedInfo = document.getElementById("details-occupied-info");
@@ -1547,20 +1556,20 @@
         unoccupiedFields.style.display = "block";
         occupiedInfo.style.display = "none";
         
-        document.getElementById("details-room-name-input").value = roomName;
-        document.getElementById("details-capacity-input").value = capacity;
-        document.getElementById("details-gender-input").value = roomGender;
+        document.getElementById("details-room-name-input").value = room.name;
+        document.getElementById("details-capacity-input").value = room.capacity;
+        document.getElementById("details-gender-input").value = room.room_gender;
       } else {
         unoccupiedFields.style.display = "none";
         occupiedInfo.style.display = "block";
         
-        document.getElementById("details-capacity-info").innerText = capacity;
+        document.getElementById("details-capacity-info").innerText = room.capacity;
         
         let genderText = "Any Gender";
-        if (roomGender === "Woman") genderText = "Woman Only";
-        else if (roomGender === "Man") genderText = "Man Only";
-        else if (roomGender === "Non-binary") genderText = "Non-binary Only";
-        else if (roomGender === "Mixed") genderText = "Mixed-Gender";
+        if (room.room_gender === "Woman") genderText = "Woman Only";
+        else if (room.room_gender === "Man") genderText = "Man Only";
+        else if (room.room_gender === "Non-binary") genderText = "Non-binary Only";
+        else if (room.room_gender === "Mixed") genderText = "Mixed-Gender";
         
         document.getElementById("details-gender-info").innerText = genderText;
       }
@@ -1716,10 +1725,14 @@
       }
     }
 
-    async function removeWriteIn(registrantId, fullName, e) {
+    async function removeWriteIn(registrantId, e) {
       if (e) {
         e.stopPropagation();
       }
+
+      const registrant = allRegistrants.find(r => r.id === registrantId);
+      if (!registrant) return;
+      const fullName = `${registrant.first_name || ""} ${registrant.last_name || ""}`.trim();
 
       if (!confirm(`Are you sure you want to remove "${fullName}" from lodging?`)) {
         return;
