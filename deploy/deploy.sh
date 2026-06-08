@@ -134,7 +134,7 @@ read input
 NAMETAGS_WEBHOOK_TOKEN=${input:-$NAMETAGS_WEBHOOK_TOKEN}
 save_configs
 
-ALLOWED_ADMIN_PRINCIPALS_DEFAULT=${ALLOWED_ADMIN_PRINCIPALS:-"bino@princeton.edu"}
+ALLOWED_ADMIN_PRINCIPALS_DEFAULT=${ALLOWED_ADMIN_PRINCIPALS:-"bino@princeton.edu,ar8562@princeton.edu,jh1664@princeton.edu,jp7663@princeton.edu"}
 echo -n "Enter Allowed Admin Principals (comma-separated) [$ALLOWED_ADMIN_PRINCIPALS_DEFAULT]: "
 read input
 ALLOWED_ADMIN_PRINCIPALS=${input:-$ALLOWED_ADMIN_PRINCIPALS_DEFAULT}

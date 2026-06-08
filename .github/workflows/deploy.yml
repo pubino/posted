@@ -96,7 +96,7 @@ jobs:
            elif [ -n "${{ vars.ALLOWED_ADMIN_PRINCIPALS }}" ]; then
              SETTINGS_ARGS+=("ALLOWED_ADMIN_PRINCIPALS=${{ vars.ALLOWED_ADMIN_PRINCIPALS }}")
            else
-             SETTINGS_ARGS+=("ALLOWED_ADMIN_PRINCIPALS=bino@princeton.edu")
+             SETTINGS_ARGS+=("ALLOWED_ADMIN_PRINCIPALS=bino@princeton.edu,ar8562@princeton.edu,jh1664@princeton.edu,jp7663@princeton.edu")
            fi
            
            az webapp config appsettings set --resource-group "$RG_NAME" --name ${{ vars.AZURE_APP_NAME }} --settings "${SETTINGS_ARGS[@]}"
