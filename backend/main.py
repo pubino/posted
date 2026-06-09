@@ -315,6 +315,7 @@ async def get_admin_nametags(request: Request):
         raise HTTPException(status_code=403, detail="Access Forbidden: Unauthorized user principal.")
     with open("frontend/admin_nametags.html", "r") as f:
         content = f.read()
+    content = content.replace("{{ ENABLE_RESTORE }}", "true" if getattr(settings, "enable_restore", True) else "false")
     return HTMLResponse(content=content)
 
 
@@ -650,3 +651,176 @@ async def delete_lodging_registrant(
         registrant.room_id = None
         db.commit()
         return {"status": "success", "action": "reverted", "message": "Official registrant reverted to non-lodging status."}
+
+
+@app.get("/api/admin/db-backup")
+async def download_db_backup(
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    if not is_admin_authorized(request):
+        raise HTTPException(status_code=403, detail="Access Forbidden")
+    
+    logger.info("Database backup requested for posted app")
+    presenters = db.query(Presenter).all()
+    registrants = db.query(Registrant).all()
+    rooms = db.query(Room).all()
+
+    backup_data = {
+        "presenters": [
+            {
+                "id": p.id,
+                "email_address": p.email_address,
+                "first_name": p.first_name,
+                "last_name": p.last_name,
+                "poster_title": p.poster_title,
+                "faculty_adviser_name": p.faculty_adviser_name,
+                "poster_presentation_abstract": p.poster_presentation_abstract,
+                "drupal_sid": p.drupal_sid,
+                "serial_number": p.serial_number,
+                "is_visible": p.is_visible,
+                "registered_at": p.registered_at.isoformat() if p.registered_at else None
+            }
+            for p in presenters
+        ],
+        "registrants": [
+            {
+                "id": r.id,
+                "email_address": r.email_address,
+                "first_name": r.first_name,
+                "last_name": r.last_name,
+                "home_institution_or_organization": r.home_institution_or_organization,
+                "attendee_status": r.attendee_status,
+                "student": r.student,
+                "t_shirt_size": r.t_shirt_size,
+                "presenting_poster": r.presenting_poster,
+                "drupal_sid": r.drupal_sid,
+                "serial_number": r.serial_number,
+                "registered_at": r.registered_at.isoformat() if r.registered_at else None,
+                "lodging": r.lodging,
+                "gender_identity": r.gender_identity,
+                "roommate_preference": r.roommate_preference,
+                "identified_roommate": r.identified_roommate,
+                "room_id": r.room_id,
+                "is_write_in": r.is_write_in
+            }
+            for r in registrants
+        ],
+        "rooms": [
+            {
+                "id": rm.id,
+                "name": rm.name,
+                "capacity": rm.capacity,
+                "room_gender": rm.room_gender,
+                "held_by": rm.held_by,
+                "comments": rm.comments,
+                "created_at": rm.created_at.isoformat() if rm.created_at else None
+            }
+            for rm in rooms
+        ]
+    }
+    
+    filename = f"posted_backup_{datetime.datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.json"
+    return JSONResponse(
+        content=backup_data,
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+
+@app.post("/api/admin/db-restore")
+async def restore_db_backup(
+    request: Request,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
+    if not is_admin_authorized(request):
+        raise HTTPException(status_code=403, detail="Access Forbidden")
+        
+    if not getattr(settings, "enable_restore", True):
+        raise HTTPException(
+            status_code=400,
+            detail="Database restore is disabled by default. Set ENABLE_RESTORE=true to enable."
+        )
+    try:
+        contents = await file.read()
+        import json
+        data = json.loads(contents)
+        
+        if "presenters" not in data or "registrants" not in data or "rooms" not in data:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid backup file format. Must contain 'presenters', 'registrants', and 'rooms' lists."
+            )
+
+        # Clear existing tables
+        db.query(Presenter).delete()
+        db.query(Registrant).delete()
+        db.query(Room).delete()
+
+        def parse_date(iso_str):
+            if iso_str:
+                return datetime.datetime.fromisoformat(iso_str)
+            return None
+
+        # Restore rooms first
+        for rm_dict in data["rooms"]:
+            rm = Room(
+                id=rm_dict["id"],
+                name=rm_dict["name"],
+                capacity=rm_dict["capacity"],
+                room_gender=rm_dict["room_gender"],
+                held_by=rm_dict.get("held_by"),
+                comments=rm_dict.get("comments"),
+                created_at=parse_date(rm_dict.get("created_at"))
+            )
+            db.add(rm)
+
+        # Restore presenters
+        for p_dict in data["presenters"]:
+            pres = Presenter(
+                id=p_dict["id"],
+                email_address=p_dict["email_address"],
+                first_name=p_dict.get("first_name"),
+                last_name=p_dict.get("last_name"),
+                poster_title=p_dict.get("poster_title"),
+                faculty_adviser_name=p_dict.get("faculty_adviser_name"),
+                poster_presentation_abstract=p_dict.get("poster_presentation_abstract"),
+                drupal_sid=p_dict.get("drupal_sid"),
+                serial_number=p_dict.get("serial_number"),
+                is_visible=p_dict.get("is_visible", True),
+                registered_at=parse_date(p_dict.get("registered_at"))
+            )
+            db.add(pres)
+
+        # Restore registrants
+        for r_dict in data["registrants"]:
+            reg = Registrant(
+                id=r_dict["id"],
+                email_address=r_dict["email_address"],
+                first_name=r_dict.get("first_name"),
+                last_name=r_dict.get("last_name"),
+                home_institution_or_organization=r_dict.get("home_institution_or_organization"),
+                attendee_status=r_dict.get("attendee_status"),
+                student=r_dict.get("student"),
+                t_shirt_size=r_dict.get("t_shirt_size"),
+                presenting_poster=r_dict.get("presenting_poster"),
+                drupal_sid=r_dict.get("drupal_sid"),
+                serial_number=r_dict.get("serial_number"),
+                registered_at=parse_date(r_dict.get("registered_at")),
+                lodging=r_dict.get("lodging"),
+                gender_identity=r_dict.get("gender_identity"),
+                roommate_preference=r_dict.get("roommate_preference"),
+                identified_roommate=r_dict.get("identified_roommate"),
+                room_id=r_dict.get("room_id"),
+                is_write_in=r_dict.get("is_write_in", False)
+            )
+            db.add(reg)
+
+        db.commit()
+        return {"status": "success", "message": "Database successfully restored from backup."}
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error during restore: {e}")
+        raise HTTPException(status_code=500, detail=f"Database restore failed: {str(e)}")

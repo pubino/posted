@@ -208,3 +208,94 @@ def test_rss_feed_generation(client, db_session):
     idx_zeta = xml_text.find("Zeta")
     assert idx_alpha < idx_zeta
 
+
+def test_db_backup_restore(client, db_session):
+    from unittest.mock import patch
+    from backend.config import settings
+    from backend.models import Presenter, Registrant, Room
+
+    # 1. Add some initial records
+    pres = Presenter(
+        id="pres_1",
+        email_address="pres@princeton.edu",
+        first_name="Alice",
+        last_name="Johnson",
+        poster_title="Quantum Chaos",
+        is_visible=True
+    )
+    reg = Registrant(
+        id="reg_1",
+        email_address="reg@princeton.edu",
+        first_name="Bob",
+        last_name="Smith",
+        attendee_status="Attendee"
+    )
+    room = Room(
+        id="room_1",
+        name="Room 101",
+        capacity=2,
+        room_gender="Any"
+    )
+    db_session.add(pres)
+    db_session.add(reg)
+    db_session.add(room)
+    db_session.commit()
+
+    # 2. Trigger backup
+    headers = {"X-MS-CLIENT-PRINCIPAL-NAME": "bino@princeton.edu"}
+    backup_res = client.get("/api/admin/db-backup", headers=headers)
+    assert backup_res.status_code == 200
+    backup_data = backup_res.json()
+    assert "presenters" in backup_data
+    assert "registrants" in backup_data
+    assert "rooms" in backup_data
+    assert len(backup_data["presenters"]) == 1
+    assert len(backup_data["registrants"]) == 1
+    assert len(backup_data["rooms"]) == 1
+
+    # Delete everything
+    db_session.query(Presenter).delete()
+    db_session.query(Registrant).delete()
+    db_session.query(Room).delete()
+    db_session.commit()
+
+    # Verify empty
+    db_session.expire_all()
+    assert db_session.query(Presenter).first() is None
+    assert db_session.query(Registrant).first() is None
+    assert db_session.query(Room).first() is None
+
+    # 3. Trigger restore (should fail if enable_restore is False)
+    import io
+    import json
+    backup_json_bytes = json.dumps(backup_data).encode("utf-8")
+    with patch.object(settings, "enable_restore", False):
+        restore_res = client.post(
+            "/api/admin/db-restore",
+            headers=headers,
+            files={"file": ("backup.json", io.BytesIO(backup_json_bytes), "application/json")}
+        )
+        assert restore_res.status_code == 400
+        assert "disabled by default" in restore_res.json()["detail"].lower()
+
+    # 4. Trigger restore with enable_restore True
+    with patch.object(settings, "enable_restore", True):
+        restore_res = client.post(
+            "/api/admin/db-restore",
+            headers=headers,
+            files={"file": ("backup.json", io.BytesIO(backup_json_bytes), "application/json")}
+        )
+        assert restore_res.status_code == 200
+        assert restore_res.json()["status"] == "success"
+
+    # Verify restored records
+    db_session.expire_all()
+    assert db_session.query(Presenter).count() == 1
+    assert db_session.query(Registrant).count() == 1
+    assert db_session.query(Room).count() == 1
+    
+    restored_pres = db_session.query(Presenter).first()
+    assert restored_pres.email_address == "pres@princeton.edu"
+    assert restored_pres.first_name == "Alice"
+    assert restored_pres.last_name == "Johnson"
+

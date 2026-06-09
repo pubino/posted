@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     drupal_webhook_token: str = "secret_drupal_token"
     nametags_webhook_token: str = "secret_nametags_token"
     allowed_admin_principals: str = "bino@princeton.edu,ar8562@princeton.edu,jh1664@princeton.edu,jp7663@princeton.edu"
+    enable_restore: bool = True
 
     @model_validator(mode="after")
     def validate_urls(self) -> "Settings":

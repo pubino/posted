@@ -235,7 +235,8 @@ az webapp config appsettings set --resource-group "$RG_NAME" --name "$APP_NAME" 
   ALLOWED_ADMIN_PRINCIPALS="$ALLOWED_ADMIN_PRINCIPALS" \
   TARGET_HOST="$TARGET_HOST" \
   BYPASS_HEADER_NAME="x-wdsoit-bot-bypass" \
-  BYPASS_HEADER_VALUE="true"
+  BYPASS_HEADER_VALUE="true" \
+  ENABLE_RESTORE="${ENABLE_RESTORE:-True}"
 if [ $? -ne 0 ]; then log_error "Failed to set App Service application settings."; exit 1; fi
 
 log_success "Deployment complete!"

@@ -501,6 +501,28 @@
               <a href="https://caarms.princeton.edu/administrative-utilities" class="btn-brand-border"><i class="fa fa-arrow-left"></i> Back to Administrative Utilities</a>
             </div>
 
+            <!-- Database Administration Panel -->
+            <div class="control-panel" style="border-top: 4px solid var(--color-brand-70, #ff6f00); margin-top: 2rem;">
+              <div class="control-title">
+                <i class="fa-solid fa-database" style="color: var(--color-brand-70, #ff6f00);"></i> Database Maintenance & Recovery
+              </div>
+              <p style="font-size: 0.875rem; color: #5f6368; margin-top: 0.5rem; margin-bottom: 1.5rem; line-height: 1.5;">
+                Manage database backups and perform authorized maintenance operations. Ensure you download a backup before restoring data.
+              </p>
+              <div style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;">
+                <button id="btnBackup" class="btn-brand-border">
+                  <span class="fa-solid fa-download"></span> Download Backup (JSON)
+                </button>
+                
+                <div style="position: relative; overflow: hidden; display: inline-block;">
+                  <button id="btnRestoreDummy" class="btn-brand-border" onclick="document.getElementById('fileRestore').click(); event.preventDefault();">
+                    <span class="fa-solid fa-upload"></span> Restore from Backup
+                  </button>
+                  <input type="file" id="fileRestore" accept=".json" style="display: none;" />
+                </div>
+              </div>
+            </div>
+
           </div>
         </div>
       </main>
@@ -513,6 +535,7 @@
 
   <!-- Main JavaScript Logic -->
   <script>
+    const ENABLE_RESTORE = {{ ENABLE_RESTORE }};
     let registrants = [];
     
     // Logo URLs (will be overwritten if custom logos are uploaded)
@@ -561,6 +584,27 @@
       // Upload events
       document.getElementById("upload-primary-form").addEventListener("submit", (e) => uploadLogo(e, "primary"));
       document.getElementById("upload-sponsor-form").addEventListener("submit", (e) => uploadLogo(e, "sponsor"));
+
+      // Admin Event Listeners for backup & restore
+      const btnBackup = document.getElementById('btnBackup');
+      const fileRestore = document.getElementById('fileRestore');
+      if (btnBackup) btnBackup.addEventListener('click', downloadDbBackup);
+      if (fileRestore) fileRestore.addEventListener('change', restoreDbBackup);
+
+      // Disable restore functionality if disabled by config
+      const btnRestoreDummy = document.getElementById('btnRestoreDummy');
+      if (typeof ENABLE_RESTORE !== 'undefined' && !ENABLE_RESTORE && btnRestoreDummy) {
+        btnRestoreDummy.disabled = true;
+        btnRestoreDummy.title = 'Restore from Backup is disabled by configuration.';
+        btnRestoreDummy.style.opacity = '0.5';
+        btnRestoreDummy.style.cursor = 'not-allowed';
+        btnRestoreDummy.removeAttribute('onclick');
+        btnRestoreDummy.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          alert('Restore from Backup is disabled by configuration.');
+        });
+      }
     });
 
     async function fetchRegistrants() {
@@ -904,6 +948,89 @@
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
+    }
+
+    // Download database backup file as JSON
+    async function downloadDbBackup() {
+      const btnBackup = document.getElementById('btnBackup');
+      if (!btnBackup) return;
+      btnBackup.disabled = true;
+      const originalText = btnBackup.innerHTML;
+      btnBackup.innerHTML = '<span class="fa-solid fa-spinner fa-spin"></span> Downloading...';
+
+      try {
+        const res = await fetch('/api/admin/db-backup');
+        if (!res.ok) throw new Error('Backup failed');
+        
+        // Read the blob and trigger file download
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        
+        // Extract filename from Content-Disposition header if possible
+        const disposition = res.headers.get('Content-Disposition');
+        let filename = `posted_backup_${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+        if (disposition && disposition.indexOf('attachment') !== -1) {
+          const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+          const matches = filenameRegex.exec(disposition);
+          if (matches != null && matches[1]) { 
+            filename = matches[1].replace(/['"]/g, '');
+          }
+        }
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+
+        alert('Database backup downloaded successfully.');
+      } catch (err) {
+        console.error(err);
+        alert('Failed to download database backup.');
+      } finally {
+        btnBackup.disabled = false;
+        btnBackup.innerHTML = originalText;
+      }
+    }
+
+    // Upload and restore database backup file
+    async function restoreDbBackup(e) {
+      const fileRestore = document.getElementById('fileRestore');
+      if (!fileRestore) return;
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const confirmRestore = confirm(`WARNING: Restoring a backup will overwrite the current database contents. All existing presenters, registrants, and rooms will be replaced.\n\nAre you sure you want to restore the database from "${file.name}"?`);
+      if (!confirmRestore) {
+        fileRestore.value = ''; // Reset input
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      try {
+        const res = await fetch('/api/admin/db-restore', {
+          method: 'POST',
+          body: formData
+        });
+        
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.detail || 'Database restore failed');
+        }
+
+        alert('Database restored successfully!');
+        
+        // Refresh registrants listing and tally counts
+        await fetchRegistrants();
+      } catch (err) {
+        console.error(err);
+        alert(`Restore failed: ${err.message}`);
+      } finally {
+        fileRestore.value = ''; // Reset input
+      }
     }
   </script>
 </body>

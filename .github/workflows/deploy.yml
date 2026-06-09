@@ -80,6 +80,7 @@ jobs:
             TARGET_HOST="https://caarms.princeton.edu"
             BYPASS_HEADER_NAME="x-wdsoit-bot-bypass"
             BYPASS_HEADER_VALUE="true"
+            ENABLE_RESTORE="${{ vars.ENABLE_RESTORE || 'True' }}"
           )
           
            # Inject webhook secret token if defined in GitHub secrets
