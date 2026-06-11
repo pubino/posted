@@ -545,8 +545,12 @@
       opacity: 0.4;
       border: 2px dashed #f58025;
     }
-    .room-list-item.room-dragover {
-      border-top: 3px solid #f58025;
+    .room-list-item.room-dragover-before {
+      border-top: 5px solid #f58025 !important;
+      background-color: rgba(245, 128, 37, 0.05);
+    }
+    .room-list-item.room-dragover-after {
+      border-bottom: 5px solid #f58025 !important;
       background-color: rgba(245, 128, 37, 0.05);
     }
     .room-drag-handle {
@@ -611,8 +615,12 @@
       opacity: 0.4;
       border: 2px dashed #f58025;
     }
-    .room-card.room-dragover {
-      border: 2px solid #f58025;
+    .room-card.room-dragover-before {
+      border-left: 5px solid #f58025 !important;
+      background-color: rgba(245, 128, 37, 0.02);
+    }
+    .room-card.room-dragover-after {
+      border-right: 5px solid #f58025 !important;
       background-color: rgba(245, 128, 37, 0.02);
     }
   </style>
@@ -1315,7 +1323,14 @@
           }
 
           return `
-            <div class="room-card" ondragover="allowDrop(event)" ondragleave="dragLeaveRoom(event)" ondrop="dropToRoom(event, '${room.id}')" id="room-${room.id}">
+            <div class="room-card" 
+                 draggable="false"
+                 ondragstart="dragRoomStart(event, '${room.id}')" 
+                 ondragend="dragRoomEnd(event)" 
+                 ondragover="handleRoomDragOver(event, '${room.id}')" 
+                 ondragleave="handleRoomDragLeave(event)" 
+                 ondrop="handleRoomDrop(event, '${room.id}')" 
+                 id="room-${room.id}">
               <div class="room-header">
                 <div>
                   <div class="room-title">
@@ -1414,7 +1429,14 @@
           }).join('');
 
           return `
-            <div class="room-list-item" ondragover="allowRoomDrop(event)" ondragleave="dragRoomLeave(event)" ondrop="dropRoom(event, '${room.id}')" id="room-${room.id}">
+            <div class="room-list-item" 
+                 draggable="false"
+                 ondragstart="dragRoomStart(event, '${room.id}')" 
+                 ondragend="dragRoomEnd(event)" 
+                 ondragover="handleRoomDragOver(event, '${room.id}')" 
+                 ondragleave="handleRoomDragLeave(event)" 
+                 ondrop="handleRoomDrop(event, '${room.id}')" 
+                 id="room-${room.id}">
               <div class="room-drag-handle" onmousedown="enableRoomDrag(this)" onmouseup="disableRoomDrag(this)" onmouseleave="disableRoomDrag(this)">
                 <i class="fa-solid fa-grip-vertical"></i>
               </div>
@@ -1698,52 +1720,103 @@
       draggedRoomId = null;
       document.querySelectorAll(".room-card, .room-list-item").forEach(el => {
         el.classList.remove("room-dragging");
-        el.classList.remove("room-dragover");
+        el.classList.remove("room-dragover-before");
+        el.classList.remove("room-dragover-after");
         el.setAttribute('draggable', 'false');
       });
     }
 
-    function allowRoomDrop(e) {
-      if (!draggedRoomId) return;
-      e.preventDefault();
-      e.currentTarget.classList.add("room-dragover");
-    }
+    function handleRoomDragOver(e, roomId) {
+      if (draggedRegistrantId) {
+        allowDrop(e);
+      } else if (draggedRoomId) {
+        if (draggedRoomId === roomId) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
 
-    function dragRoomLeave(e) {
-      e.currentTarget.classList.remove("room-dragover");
-    }
-
-    async function dropRoom(e, targetRoomId) {
-      e.preventDefault();
-      e.currentTarget.classList.remove("room-dragover");
-      
-      const sourceRoomId = e.dataTransfer.getData("room-id") || draggedRoomId;
-      if (!sourceRoomId || sourceRoomId === targetRoomId) return;
-
-      const sourceIdx = allRooms.findIndex(r => r.id === sourceRoomId);
-      const targetIdx = allRooms.findIndex(r => r.id === targetRoomId);
-      if (sourceIdx === -1 || targetIdx === -1) return;
-
-      // Reorder local list
-      const [movedRoom] = allRooms.splice(sourceIdx, 1);
-      allRooms.splice(targetIdx, 0, movedRoom);
-
-      calculateStatsAndRender();
-
-      // Save to backend
-      try {
-        const response = await fetch("/api/admin/rooms/reorder", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({ room_ids: allRooms.map(r => r.id) })
-        });
-        if (!response.ok) {
-          throw new Error("Failed to save room order");
+        const card = e.currentTarget;
+        const rect = card.getBoundingClientRect();
+        
+        if (currentView === "grid") {
+          const relX = e.clientX - rect.left;
+          if (relX < rect.width / 2) {
+            card.classList.add("room-dragover-before");
+            card.classList.remove("room-dragover-after");
+          } else {
+            card.classList.add("room-dragover-after");
+            card.classList.remove("room-dragover-before");
+          }
+        } else {
+          const relY = e.clientY - rect.top;
+          if (relY < rect.height / 2) {
+            card.classList.add("room-dragover-before");
+            card.classList.remove("room-dragover-after");
+          } else {
+            card.classList.add("room-dragover-after");
+            card.classList.remove("room-dragover-before");
+          }
         }
-      } catch (err) {
-        console.error("Error saving room order:", err);
+      }
+    }
+
+    function handleRoomDragLeave(e) {
+      if (draggedRegistrantId) {
+        dragLeaveRoom(e);
+      } else if (draggedRoomId) {
+        const card = e.currentTarget;
+        card.classList.remove("room-dragover-before");
+        card.classList.remove("room-dragover-after");
+      }
+    }
+
+    async function handleRoomDrop(e, targetRoomId) {
+      e.preventDefault();
+      
+      if (draggedRegistrantId) {
+        dropToRoom(e, targetRoomId);
+      } else if (draggedRoomId) {
+        const card = e.currentTarget;
+        const isBefore = card.classList.contains("room-dragover-before");
+        
+        card.classList.remove("room-dragover-before");
+        card.classList.remove("room-dragover-after");
+
+        const sourceRoomId = draggedRoomId;
+        if (!sourceRoomId || sourceRoomId === targetRoomId) return;
+
+        const sourceIdx = allRooms.findIndex(r => r.id === sourceRoomId);
+        let targetIdx = allRooms.findIndex(r => r.id === targetRoomId);
+        if (sourceIdx === -1 || targetIdx === -1) return;
+
+        // Reorder local list
+        const [movedRoom] = allRooms.splice(sourceIdx, 1);
+        
+        // Recalculate targetIdx after splicing out the source
+        targetIdx = allRooms.findIndex(r => r.id === targetRoomId);
+        
+        if (isBefore) {
+          allRooms.splice(targetIdx, 0, movedRoom);
+        } else {
+          allRooms.splice(targetIdx + 1, 0, movedRoom);
+        }
+
+        calculateStatsAndRender();
+
+        // Save to backend
+        try {
+          const response = await fetch("/api/admin/rooms/reorder", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ room_ids: allRooms.map(r => r.id) })
+          });
+          if (!response.ok) {
+            throw new Error("Failed to save room order");
+          }
+        } catch (err) {
+          console.error("Error saving room order:", err);
+        }
       }
     }
 
