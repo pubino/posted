@@ -254,6 +254,15 @@ class RoomCreate(BaseModel):
     category: Optional[str] = None
 
 
+class RoomBulkCreate(BaseModel):
+    base_name: str
+    count: int = 1
+    capacity: int = 2
+    room_gender: str = "Any"
+    category: Optional[str] = None
+
+
+
 class RoomUpdate(BaseModel):
     held_by: Optional[str] = None
     comments: Optional[str] = None

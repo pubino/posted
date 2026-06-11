@@ -796,6 +796,34 @@
             <option value="Student Room">Student Room</option>
           </select>
         </div>
+        <div class="form-group">
+          <label for="room-count">Number of Rooms to Create</label>
+          <select id="room-count" class="form-select">
+            <option value="1" selected>1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+            <option value="6">6</option>
+            <option value="7">7</option>
+            <option value="8">8</option>
+            <option value="9">9</option>
+            <option value="10">10</option>
+            <option value="11">11</option>
+            <option value="12">12</option>
+            <option value="13">13</option>
+            <option value="14">14</option>
+            <option value="15">15</option>
+            <option value="16">16</option>
+            <option value="17">17</option>
+            <option value="18">18</option>
+            <option value="19">19</option>
+            <option value="20">20</option>
+          </select>
+          <small class="text-muted" style="display: block; margin-top: 0.25rem;">
+            If creating multiple rooms, the names will auto-increment based on trailing digits (e.g., Room 101, Room 102...).
+          </small>
+        </div>
         
         <div class="text-end mt-4">
           <button type="submit" class="btn-brand-filled">Create</button>
@@ -1767,20 +1795,38 @@
       const capacity = parseInt(document.getElementById("room-capacity").value);
       const room_gender = document.getElementById("room-gender").value;
       const category = document.getElementById("room-category").value || null;
+      const count = parseInt(document.getElementById("room-count").value || "1", 10);
 
       try {
-        const response = await fetch("/api/admin/rooms", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            name: name,
-            capacity: capacity,
-            room_gender: room_gender,
-            category: category
-          })
-        });
+        let response;
+        if (count > 1) {
+          response = await fetch("/api/admin/rooms/bulk", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              base_name: name,
+              count: count,
+              capacity: capacity,
+              room_gender: room_gender,
+              category: category
+            })
+          });
+        } else {
+          response = await fetch("/api/admin/rooms", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              name: name,
+              capacity: capacity,
+              room_gender: room_gender,
+              category: category
+            })
+          });
+        }
 
         if (!response.ok) {
           const errData = await response.json();

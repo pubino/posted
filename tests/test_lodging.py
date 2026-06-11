@@ -428,3 +428,46 @@ def test_room_reordering(client, db_session):
     names = [r["name"] for r in response.json()]
     assert names == ["B", "C", "A"]
 
+
+def test_bulk_room_creation(client, db_session):
+    headers = {"X-MS-CLIENT-PRINCIPAL-NAME": "bino@princeton.edu"}
+
+    # 1. Create bulk rooms with incrementing trailing digits
+    response = client.post(
+        "/api/admin/rooms/bulk",
+        json={"base_name": "Room 108", "count": 3, "capacity": 2, "room_gender": "Woman", "category": "Student Room"},
+        headers=headers
+    )
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert len(data) == 3
+    assert data[0]["name"] == "Room 108"
+    assert data[1]["name"] == "Room 109"
+    assert data[2]["name"] == "Room 110"
+    for r in data:
+        assert r["capacity"] == 2
+        assert r["room_gender"] == "Woman"
+        assert r["category"] == "Student Room"
+
+    # 2. Try creating duplicate names (should fail)
+    response = client.post(
+        "/api/admin/rooms/bulk",
+        json={"base_name": "Room 109", "count": 2, "capacity": 2},
+        headers=headers
+    )
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert "already exist" in response.json()["detail"].lower()
+
+    # 3. Create bulk rooms without trailing digits
+    response = client.post(
+        "/api/admin/rooms/bulk",
+        json={"base_name": "Speaker Suite", "count": 2, "capacity": 1},
+        headers=headers
+    )
+    assert response.status_code == status.HTTP_200_OK
+    data2 = response.json()
+    assert len(data2) == 2
+    assert data2[0]["name"] == "Speaker Suite 1"
+    assert data2[1]["name"] == "Speaker Suite 2"
+
+

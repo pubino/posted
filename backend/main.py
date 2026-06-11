@@ -13,7 +13,7 @@ import shutil
 from backend.config import settings
 from backend.database import get_db, engine, Base, run_migrations
 from backend.models import Presenter, Registrant, Room
-from backend.schemas import DrupalWebhookPayload, PresenterResponse, NametagsWebhookPayload, RegistrantResponse, RoomResponse, RoomCreate, RoomAssignmentPayload, RoomUpdate, ToggleLodgingPayload, WriteInCreate, RoomReorderPayload
+from backend.schemas import DrupalWebhookPayload, PresenterResponse, NametagsWebhookPayload, RegistrantResponse, RoomResponse, RoomCreate, RoomAssignmentPayload, RoomUpdate, ToggleLodgingPayload, WriteInCreate, RoomReorderPayload, RoomBulkCreate
 from backend.download_assets import download_assets
 
 # Setup Logging
@@ -414,6 +414,62 @@ async def create_admin_room(
     db.commit()
     db.refresh(room)
     return room
+
+
+@app.post("/api/admin/rooms/bulk", response_model=List[RoomResponse])
+async def create_admin_rooms_bulk(
+    request: Request,
+    payload: RoomBulkCreate,
+    db: Session = Depends(get_db)
+):
+    if not is_admin_authorized(request):
+        raise HTTPException(status_code=403, detail="Access Forbidden")
+    
+    if payload.count < 1 or payload.count > 20:
+        raise HTTPException(status_code=400, detail="Count must be between 1 and 20.")
+        
+    import re
+    base_name = payload.base_name.strip()
+    if not base_name:
+        raise HTTPException(status_code=400, detail="Room name pattern cannot be empty.")
+        
+    # Generate names
+    match = re.search(r'(\d+)$', base_name)
+    if match:
+        num_str = match.group(1)
+        starting_num = int(num_str)
+        width = len(num_str)
+        prefix = base_name[:-width]
+        names = [f"{prefix}{str(starting_num + i).zfill(width)}" for i in range(payload.count)]
+    else:
+        # If no trailing number, append " 1", " 2", etc.
+        names = [f"{base_name} {i + 1}" for i in range(payload.count)]
+        
+    # Check for duplicates across all generated names
+    existing = db.query(Room).filter(Room.name.in_(names)).all()
+    if existing:
+        existing_names = ", ".join([r.name for r in existing])
+        raise HTTPException(status_code=400, detail=f"Rooms already exist: {existing_names}")
+        
+    created_rooms = []
+    for name in names:
+        room = Room(
+            id=str(uuid.uuid4()),
+            name=name,
+            capacity=payload.capacity,
+            room_gender=payload.room_gender,
+            category=payload.category,
+            sort_order=0
+        )
+        db.add(room)
+        created_rooms.append(room)
+        
+    db.commit()
+    for room in created_rooms:
+        db.refresh(room)
+        
+    return created_rooms
+
 
 
 @app.delete("/api/admin/rooms/{room_id}")
