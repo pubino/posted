@@ -79,7 +79,9 @@ def run_migrations():
         columns = [col['name'] for col in inspector.get_columns('rooms')]
         new_room_cols = {
             'held_by': 'VARCHAR',
-            'comments': 'VARCHAR'
+            'comments': 'VARCHAR',
+            'category': 'VARCHAR',
+            'sort_order': 'INTEGER DEFAULT 0'
         }
         for col_name, col_type in new_room_cols.items():
             if col_name not in columns:

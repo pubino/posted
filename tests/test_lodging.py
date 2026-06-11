@@ -365,3 +365,66 @@ def test_lodging_write_ins_and_promotions(client, db_session):
     db_session.expire_all()
     reg_db = db_session.query(Registrant).filter(Registrant.id == manual_id).first()
     assert reg_db is None
+
+
+def test_room_category(client, db_session):
+    headers = {"X-MS-CLIENT-PRINCIPAL-NAME": "bino@princeton.edu"}
+
+    # 1. Create room with category
+    response = client.post(
+        "/api/admin/rooms",
+        json={"name": "201", "capacity": 2, "room_gender": "Any", "category": "Speaker Room"},
+        headers=headers
+    )
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert data["category"] == "Speaker Room"
+    room_id = data["id"]
+
+    # 2. Verify in DB
+    db_session.expire_all()
+    room_db = db_session.query(Room).filter(Room.id == room_id).first()
+    assert room_db.category == "Speaker Room"
+
+    # 3. Update category via PATCH
+    response = client.patch(
+        f"/api/admin/rooms/{room_id}",
+        json={"category": "Student Room"},
+        headers=headers
+    )
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["category"] == "Student Room"
+
+    # 4. Clear category
+    response = client.patch(
+        f"/api/admin/rooms/{room_id}",
+        json={"category": "None"},
+        headers=headers
+    )
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["category"] is None
+
+
+def test_room_reordering(client, db_session):
+    headers = {"X-MS-CLIENT-PRINCIPAL-NAME": "bino@princeton.edu"}
+
+    # 1. Create three rooms
+    r1 = client.post("/api/admin/rooms", json={"name": "A", "capacity": 2}, headers=headers).json()
+    r2 = client.post("/api/admin/rooms", json={"name": "B", "capacity": 2}, headers=headers).json()
+    r3 = client.post("/api/admin/rooms", json={"name": "C", "capacity": 2}, headers=headers).json()
+
+    # Verify default sort (order by name or sort_order)
+    response = client.get("/api/admin/rooms", headers=headers)
+    names = [r["name"] for r in response.json()]
+    assert names == ["A", "B", "C"]
+
+    # 2. Reorder rooms: B, C, A
+    reorder_payload = {"room_ids": [r2["id"], r3["id"], r1["id"]]}
+    response = client.post("/api/admin/rooms/reorder", json=reorder_payload, headers=headers)
+    assert response.status_code == status.HTTP_200_OK
+
+    # 3. Verify sorted listing
+    response = client.get("/api/admin/rooms", headers=headers)
+    names = [r["name"] for r in response.json()]
+    assert names == ["B", "C", "A"]
+

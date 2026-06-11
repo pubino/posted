@@ -13,7 +13,7 @@ import shutil
 from backend.config import settings
 from backend.database import get_db, engine, Base, run_migrations
 from backend.models import Presenter, Registrant, Room
-from backend.schemas import DrupalWebhookPayload, PresenterResponse, NametagsWebhookPayload, RegistrantResponse, RoomResponse, RoomCreate, RoomAssignmentPayload, RoomUpdate, ToggleLodgingPayload, WriteInCreate
+from backend.schemas import DrupalWebhookPayload, PresenterResponse, NametagsWebhookPayload, RegistrantResponse, RoomResponse, RoomCreate, RoomAssignmentPayload, RoomUpdate, ToggleLodgingPayload, WriteInCreate, RoomReorderPayload
 from backend.download_assets import download_assets
 
 # Setup Logging
@@ -384,7 +384,7 @@ async def get_admin_lodging(request: Request):
 async def list_admin_rooms(request: Request, db: Session = Depends(get_db)):
     if not is_admin_authorized(request):
         raise HTTPException(status_code=403, detail="Access Forbidden")
-    rooms = db.query(Room).order_by(Room.name.asc()).all()
+    rooms = db.query(Room).order_by(Room.sort_order.asc(), Room.name.asc()).all()
     return rooms
 
 
@@ -406,7 +406,9 @@ async def create_admin_room(
         id=str(uuid.uuid4()),
         name=payload.name.strip(),
         capacity=payload.capacity,
-        room_gender=payload.room_gender
+        room_gender=payload.room_gender,
+        category=payload.category,
+        sort_order=0
     )
     db.add(room)
     db.commit()
@@ -480,15 +482,34 @@ async def update_admin_room(
         if payload.room_gender is not None:
             room.room_gender = payload.room_gender
             
-    # Always allow updating held_by and comments
+    # Always allow updating held_by, comments, category, sort_order
     if payload.held_by is not None:
         room.held_by = payload.held_by
     if payload.comments is not None:
         room.comments = payload.comments
+    if payload.category is not None:
+        room.category = payload.category if payload.category != "None" and payload.category != "" else None
+    if payload.sort_order is not None:
+        room.sort_order = payload.sort_order
         
     db.commit()
     db.refresh(room)
     return room
+
+
+@app.post("/api/admin/rooms/reorder")
+async def reorder_admin_rooms(
+    request: Request,
+    payload: RoomReorderPayload,
+    db: Session = Depends(get_db)
+):
+    if not is_admin_authorized(request):
+        raise HTTPException(status_code=403, detail="Access Forbidden")
+    
+    for idx, r_id in enumerate(payload.room_ids):
+        db.query(Room).filter(Room.id == r_id).update({Room.sort_order: idx})
+    db.commit()
+    return {"status": "success", "message": "Rooms reordered successfully."}
 
 
 @app.post("/api/admin/rooms/assign")
@@ -714,6 +735,8 @@ async def download_db_backup(
                 "room_gender": rm.room_gender,
                 "held_by": rm.held_by,
                 "comments": rm.comments,
+                "category": rm.category,
+                "sort_order": rm.sort_order,
                 "created_at": rm.created_at.isoformat() if rm.created_at else None
             }
             for rm in rooms
@@ -771,6 +794,8 @@ async def restore_db_backup(
                 room_gender=rm_dict["room_gender"],
                 held_by=rm_dict.get("held_by"),
                 comments=rm_dict.get("comments"),
+                category=rm_dict.get("category"),
+                sort_order=rm_dict.get("sort_order", 0),
                 created_at=parse_date(rm_dict.get("created_at"))
             )
             db.add(rm)

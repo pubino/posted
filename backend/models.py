@@ -51,4 +51,7 @@ class Room(Base):
     room_gender = Column(String, default="Any", nullable=False)  # "Any", "Man", "Woman", "Non-binary", "Mixed"
     held_by = Column(String, nullable=True)
     comments = Column(String, nullable=True)
+    category = Column(String, nullable=True)  # "Speaker Room", "Student Room", or None
+    sort_order = Column(Integer, default=0, nullable=False, server_default="0")
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
+

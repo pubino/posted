@@ -519,6 +519,102 @@
       display: block;
       font-size: 0.9rem;
     }
+
+    /* List View Styles */
+    .rooms-list {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .room-list-item {
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      position: relative;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.01);
+      transition: all 0.2s ease;
+    }
+    .room-list-item:hover {
+      box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+    }
+    .room-list-item.room-dragging {
+      opacity: 0.4;
+      border: 2px dashed #f58025;
+    }
+    .room-list-item.room-dragover {
+      border-top: 3px solid #f58025;
+      background-color: rgba(245, 128, 37, 0.05);
+    }
+    .room-drag-handle {
+      cursor: grab;
+      color: #bbb;
+      padding: 0.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      transition: color 0.2s;
+    }
+    .room-drag-handle:hover {
+      color: #f58025;
+    }
+    .room-drag-handle:active {
+      cursor: grabbing;
+    }
+    .room-list-info {
+      flex: 0 0 240px;
+      min-width: 0;
+    }
+    .room-list-occupants {
+      flex-grow: 1;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      align-items: center;
+    }
+    .room-list-warnings {
+      flex: 0 0 280px;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      font-size: 0.75rem;
+    }
+    .room-list-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    /* Compact occupant and slot elements for List View */
+    .occupant-item.compact {
+      padding: 0.25rem 0.5rem;
+      font-size: 0.8rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+    .bed-slot.compact {
+      height: 32px;
+      padding: 0.25rem 0.5rem;
+      font-size: 0.75rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Drag over states for room card reordering in Grid View */
+    .room-card.room-dragging {
+      opacity: 0.4;
+      border: 2px dashed #f58025;
+    }
+    .room-card.room-dragover {
+      border: 2px solid #f58025;
+      background-color: rgba(245, 128, 37, 0.02);
+    }
   </style>
 </head>
 <body class="page-node content-type-ps-basic-page flavor1 fontset2 btn-v1 menu4 layout-block-padding-medium layout-above-section-spacing-none layout-below-section-spacing-medium">
@@ -630,8 +726,16 @@
 
               <!-- RIGHT COLUMN: ROOMS MANAGEMENT -->
               <div class="rooms-pane">
-                <div class="rooms-section-header">
+                <div class="rooms-section-header d-flex justify-content-between align-items-center mb-3">
                   <h3 style="font-family: 'Lora', serif; font-weight: 700; margin: 0;">Planned Room Assignments</h3>
+                  <div class="btn-group" role="group" aria-label="Room View Toggle">
+                    <button type="button" class="btn btn-sm btn-outline-secondary active" id="view-grid-btn" title="Grid View">
+                      <i class="fa-solid fa-grip"></i> Grid
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="view-list-btn" title="List View">
+                      <i class="fa-solid fa-list"></i> List
+                    </button>
+                  </div>
                 </div>
 
                 <div class="rooms-grid" id="rooms-grid-container">
@@ -682,6 +786,14 @@
             <option value="Man">Man Only</option>
             <option value="Non-binary">Non-binary Only</option>
             <option value="Mixed">Mixed-Gender Room (Gender-Inclusive)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="room-category">Room Category</label>
+          <select id="room-category" class="form-select">
+            <option value="" selected>No Category</option>
+            <option value="Speaker Room">Speaker Room</option>
+            <option value="Student Room">Student Room</option>
           </select>
         </div>
         
@@ -835,6 +947,14 @@
           <label for="details-comments">Comments / Notes (Optional)</label>
           <textarea id="details-comments" class="form-control" rows="3" placeholder="Enter notes about this room assignment..."></textarea>
         </div>
+        <div class="form-group">
+          <label for="details-category-input">Room Category</label>
+          <select id="details-category-input" class="form-select">
+            <option value="">No Category</option>
+            <option value="Speaker Room">Speaker Room</option>
+            <option value="Student Room">Student Room</option>
+          </select>
+        </div>
         
         <div class="text-end mt-4">
           <button type="submit" class="btn-brand-filled">Save Details</button>
@@ -849,8 +969,9 @@
     let allRooms = [];
     let activeWarningsCount = 0;
     
-    // Drag and Drop tracking
+    let currentView = "grid"; // "grid" or "list"
     let draggedRegistrantId = null;
+    let draggedRoomId = null;
 
     document.addEventListener("DOMContentLoaded", () => {
       fetchData();
@@ -858,6 +979,24 @@
       // Hook up UI element handlers
       document.getElementById("search-unassigned").addEventListener("input", filterAndRenderUnassigned);
       document.getElementById("gender-filter").addEventListener("change", filterAndRenderUnassigned);
+
+      // View Toggle Handlers
+      const gridBtn = document.getElementById("view-grid-btn");
+      const listBtn = document.getElementById("view-list-btn");
+      
+      gridBtn.addEventListener("click", () => {
+        currentView = "grid";
+        gridBtn.classList.add("active");
+        listBtn.classList.remove("active");
+        calculateStatsAndRender();
+      });
+      
+      listBtn.addEventListener("click", () => {
+        currentView = "list";
+        listBtn.classList.add("active");
+        gridBtn.classList.remove("active");
+        calculateStatsAndRender();
+      });
       
       // Modal Open/Close handlers
       const createModal = document.getElementById("create-room-modal");
@@ -963,9 +1102,9 @@
 
       // Render workspaces
       filterAndRenderUnassigned();
-      renderRoomsGrid();
+      renderRooms();
       
-      // Update conflicts count in UI (computed in renderRoomsGrid)
+      // Update conflicts count in UI (computed in renderRooms)
       document.getElementById("stat-warnings").innerText = activeWarningsCount;
     }
 
@@ -1046,10 +1185,11 @@
       }).join('');
     }
 
-    // Room grid rendering & validation checks
-    function renderRoomsGrid() {
+    // Room list and grid rendering & validation checks
+    function renderRooms() {
       const container = document.getElementById("rooms-grid-container");
       if (allRooms.length === 0) {
+        container.className = "rooms-grid";
         container.innerHTML = `
           <div class="col-span-full text-center text-muted py-5 bg-white border rounded">
             <i class="fa-solid fa-door-closed fa-3x mb-3" style="color: #ddd;"></i>
@@ -1063,130 +1203,239 @@
 
       let warningsTally = 0;
 
-      container.innerHTML = allRooms.map(room => {
-        // Find occupants in this room
-        const occupants = allRegistrants.filter(r => r.room_id === room.id);
-        
-        // 1. Capacity checks
-        const spots = [];
-        for (let i = 0; i < room.capacity; i++) {
-          if (occupants[i]) {
-            spots.push(occupants[i]);
-          } else {
-            spots.push(null); // Empty slot
+      if (currentView === "grid") {
+        container.className = "rooms-grid";
+        container.innerHTML = allRooms.map(room => {
+          const occupants = allRegistrants.filter(r => r.room_id === room.id);
+          const spots = [];
+          for (let i = 0; i < room.capacity; i++) {
+            spots.push(occupants[i] || null);
           }
-        }
 
-        // Run validation rules
-        const validation = validateRoomState(room, occupants);
-        warningsTally += validation.warnings.length;
+          const validation = validateRoomState(room, occupants);
+          warningsTally += validation.warnings.length;
 
-        // Header gender class banner
-        let genderConstraintText = "Any Gender";
-        let genderIcon = '<i class="fa-solid fa-users text-muted"></i>';
-        if (room.room_gender === "Woman") {
-          genderConstraintText = "Woman Only";
-          genderIcon = '<i class="fa-solid fa-venus text-danger"></i>';
-        } else if (room.room_gender === "Man") {
-          genderConstraintText = "Man Only";
-          genderIcon = '<i class="fa-solid fa-mars text-primary"></i>';
-        } else if (room.room_gender === "Non-binary") {
-          genderConstraintText = "Non-binary Only";
-          genderIcon = '<i class="fa-solid fa-genderless text-purple"></i>';
-        } else if (room.room_gender === "Mixed") {
-          genderConstraintText = "Mixed-Gender Room";
-          genderIcon = '<i class="fa-solid fa-circle-nodes text-success"></i>';
-        }
+          let genderConstraintText = "Any Gender";
+          let genderIcon = '<i class="fa-solid fa-users text-muted"></i>';
+          if (room.room_gender === "Woman") {
+            genderConstraintText = "Woman Only";
+            genderIcon = '<i class="fa-solid fa-venus text-danger"></i>';
+          } else if (room.room_gender === "Man") {
+            genderConstraintText = "Man Only";
+            genderIcon = '<i class="fa-solid fa-mars text-primary"></i>';
+          } else if (room.room_gender === "Non-binary") {
+            genderConstraintText = "Non-binary Only";
+            genderIcon = '<i class="fa-solid fa-genderless text-purple"></i>';
+          } else if (room.room_gender === "Mixed") {
+            genderConstraintText = "Mixed-Gender Room";
+            genderIcon = '<i class="fa-solid fa-circle-nodes text-success"></i>';
+          }
 
-        // Render warnings HTML block
-        let feedbackBlock = "";
-        if (validation.warnings.length > 0) {
-          feedbackBlock = `
-            <div class="room-warnings">
-              ${validation.warnings.map(w => `
-                <div class="warning-item">
-                  <i class="fa-solid ${w.type === 'error' ? 'fa-circle-xmark text-danger' : 'fa-circle-exclamation text-warning'}"></i>
-                  <span>${escapeHtml(w.text)}</span>
+          let feedbackBlock = "";
+          if (validation.warnings.length > 0) {
+            feedbackBlock = `
+              <div class="room-warnings">
+                ${validation.warnings.map(w => `
+                  <div class="warning-item">
+                    <i class="fa-solid ${w.type === 'error' ? 'fa-circle-xmark text-danger' : 'fa-circle-exclamation text-warning'}"></i>
+                    <span>${escapeHtml(w.text)}</span>
+                  </div>
+                `).join('')}
+              </div>
+            `;
+          } else if (occupants.length > 0) {
+            feedbackBlock = `
+              <div class="room-success-msg">
+                <i class="fa-solid fa-circle-check text-success"></i>
+                <span>All preferences and gender rules satisfied.</span>
+              </div>
+            `;
+          }
+
+          const slotsHtml = spots.map((occ, idx) => {
+            if (occ) {
+              const genderClass = `gender-${(occ.gender_identity || "Prefer-not-to-say").replace(" ", "-")}`;
+              return `
+                <div class="occupant-item" draggable="true" ondragstart="dragStart(event, '${occ.id}')" ondragend="dragEnd(event)">
+                  <div class="occupant-info">
+                    <div class="occupant-name">${escapeHtml(occ.first_name)} ${escapeHtml(occ.last_name)}</div>
+                    <div class="occupant-badges">
+                      <span class="badge-gender ${genderClass}">${escapeHtml(occ.gender_identity || "Unspecified")}</span>
+                      ${occ.roommate_preference === "Require Same Gender" ? '<span class="badge-pref pref-Require" style="font-size:0.65rem;">Require Same</span>' : ''}
+                      ${occ.identified_roommate ? `<span class="badge-request" style="font-size:0.65rem;"><i class="fa-solid fa-user-group"></i> Req: ${escapeHtml(occ.identified_roommate)}</span>` : ''}
+                    </div>
+                  </div>
+                  <button class="unassign-btn" onclick="unassignRegistrant('${occ.id}')" title="Unassign attendee from room">
+                    <i class="fa-solid fa-xmark"></i>
+                  </button>
                 </div>
-              `).join('')}
-            </div>
-          `;
-        } else if (occupants.length > 0) {
-          feedbackBlock = `
-            <div class="room-success-msg">
-              <i class="fa-solid fa-circle-check text-success"></i>
-              <span>All preferences and gender rules satisfied.</span>
-            </div>
-          `;
-        }
+              `;
+            } else {
+              return `
+                <div class="bed-slot" onclick="openSelectAttendeeModal('${room.id}')" title="Click to assign attendee to this slot">
+                  <i class="fa-solid fa-bed mr-2"></i> Empty Bed (Click to Assign)
+                </div>
+              `;
+            }
+          }).join('');
 
-        // Render slots
-        const slotsHtml = spots.map((occ, idx) => {
-          if (occ) {
-            const genderClass = `gender-${(occ.gender_identity || "Prefer-not-to-say").replace(" ", "-")}`;
-            return `
-              <div class="occupant-item" draggable="true" ondragstart="dragStart(event, '${occ.id}')" ondragend="dragEnd(event)">
-                <div class="occupant-info">
-                  <div class="occupant-name">${escapeHtml(occ.first_name)} ${escapeHtml(occ.last_name)}</div>
-                  <div class="occupant-badges">
-                    <span class="badge-gender ${genderClass}">${escapeHtml(occ.gender_identity || "Unspecified")}</span>
-                    ${occ.roommate_preference === "Require Same Gender" ? '<span class="badge-pref pref-Require" style="font-size:0.65rem;">Require Same</span>' : ''}
-                    ${occ.identified_roommate ? `<span class="badge-request" style="font-size:0.65rem;"><i class="fa-solid fa-user-group"></i> Req: ${escapeHtml(occ.identified_roommate)}</span>` : ''}
+          let categoryBadge = "";
+          if (room.category === "Speaker Room") {
+            categoryBadge = `<span class="badge bg-warning text-dark ml-2" style="font-size: 0.725rem;"><i class="fa-solid fa-microphone"></i> Speaker</span>`;
+          } else if (room.category === "Student Room") {
+            categoryBadge = `<span class="badge bg-secondary ml-2" style="font-size: 0.725rem;"><i class="fa-solid fa-graduation-cap"></i> Student</span>`;
+          }
+
+          return `
+            <div class="room-card" ondragover="allowDrop(event)" ondragleave="dragLeaveRoom(event)" ondrop="dropToRoom(event, '${room.id}')" id="room-${room.id}">
+              <div class="room-header">
+                <div>
+                  <div class="room-title">
+                    <div class="room-drag-handle d-inline-block p-0 mr-2" onmousedown="enableRoomDrag(this)" onmouseup="disableRoomDrag(this)" onmouseleave="disableRoomDrag(this)">
+                      <i class="fa-solid fa-grip-vertical text-muted" style="font-size: 0.9rem;"></i>
+                    </div>
+                    <i class="fa-solid fa-door-open" style="color: #f58025;"></i>
+                    ${escapeHtml(room.name)}
+                    ${categoryBadge}
+                  </div>
+                  <div class="room-meta">
+                    <span>Capacity: ${occupants.length}/${room.capacity}</span>
+                    <span>|</span>
+                    <span>${genderIcon} ${genderConstraintText}</span>
                   </div>
                 </div>
-                <button class="unassign-btn" onclick="unassignRegistrant('${occ.id}')" title="Unassign attendee from room">
-                  <i class="fa-solid fa-xmark"></i>
-                </button>
+                <div class="room-actions">
+                  <button class="unassign-btn mr-2" onclick="openRoomDetailsModal('${room.id}')" title="Room Details & Notes">
+                    <i class="fa-solid fa-circle-info"></i>
+                  </button>
+                  <button class="room-delete-btn" onclick="deleteRoom('${room.id}')" title="Delete room and unassign attendees">
+                    <i class="fa-solid fa-trash-can"></i>
+                  </button>
+                </div>
               </div>
-            `;
-          } else {
-            return `
-              <div class="bed-slot" onclick="openSelectAttendeeModal('${room.id}')" title="Click to assign attendee to this slot">
-                <i class="fa-solid fa-bed mr-2"></i> Empty Bed (Click to Assign)
-              </div>
-            `;
-          }
-        }).join('');
 
-        return `
-          <div class="room-card" ondragover="allowDrop(event)" ondragleave="dragLeaveRoom(event)" ondrop="dropToRoom(event, '${room.id}')" id="room-${room.id}">
-            <div class="room-header">
-              <div>
-                <div class="room-title">
+              <div class="room-occupants">
+                ${slotsHtml}
+              </div>
+
+              ${room.held_by || room.comments ? `
+                <div class="px-3 pb-2 pt-0" style="font-size: 0.75rem; border-top: 1px dashed #eee; background-color: #fafafa; color: #555; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; margin-top: -0.5rem; margin-bottom: 0.5rem;">
+                  ${room.held_by ? `<div class="mt-1"><strong>Held By:</strong> ${escapeHtml(room.held_by)}</div>` : ''}
+                  ${room.comments ? `<div class="mt-1 text-muted" style="white-space: pre-wrap; font-style: italic;">"${escapeHtml(room.comments)}"</div>` : ''}
+                </div>
+              ` : ''}
+
+              ${feedbackBlock}
+            </div>
+          `;
+        }).join('');
+      } else {
+        container.className = "rooms-list";
+        container.innerHTML = allRooms.map(room => {
+          const occupants = allRegistrants.filter(r => r.room_id === room.id);
+          const spots = [];
+          for (let i = 0; i < room.capacity; i++) {
+            spots.push(occupants[i] || null);
+          }
+
+          const validation = validateRoomState(room, occupants);
+          warningsTally += validation.warnings.length;
+
+          let genderConstraintText = "Any Gender";
+          let genderIcon = '<i class="fa-solid fa-users text-muted"></i>';
+          if (room.room_gender === "Woman") {
+            genderConstraintText = "Woman Only";
+            genderIcon = '<i class="fa-solid fa-venus text-danger"></i>';
+          } else if (room.room_gender === "Man") {
+            genderConstraintText = "Man Only";
+            genderIcon = '<i class="fa-solid fa-mars text-primary"></i>';
+          } else if (room.room_gender === "Non-binary") {
+            genderConstraintText = "Non-binary Only";
+            genderIcon = '<i class="fa-solid fa-genderless text-purple"></i>';
+          } else if (room.room_gender === "Mixed") {
+            genderConstraintText = "Mixed-Gender Room";
+            genderIcon = '<i class="fa-solid fa-circle-nodes text-success"></i>';
+          }
+
+          let categoryBadge = "";
+          if (room.category === "Speaker Room") {
+            categoryBadge = `<span class="badge bg-warning text-dark ml-2" style="font-size: 0.725rem;"><i class="fa-solid fa-microphone"></i> Speaker</span>`;
+          } else if (room.category === "Student Room") {
+            categoryBadge = `<span class="badge bg-secondary ml-2" style="font-size: 0.725rem;"><i class="fa-solid fa-graduation-cap"></i> Student</span>`;
+          }
+
+          const slotsHtml = spots.map((occ, idx) => {
+            if (occ) {
+              const genderClass = `gender-${(occ.gender_identity || "Prefer-not-to-say").replace(" ", "-")}`;
+              return `
+                <div class="occupant-item compact" draggable="true" ondragstart="dragStart(event, '${occ.id}')" ondragend="dragEnd(event)">
+                  <span class="occupant-name">${escapeHtml(occ.first_name)} ${escapeHtml(occ.last_name)}</span>
+                  <span class="badge-gender ${genderClass}" style="font-size:0.65rem; padding: 0.1rem 0.25rem;">${escapeHtml(occ.gender_identity || "Unspecified")}</span>
+                  <button class="unassign-btn ml-1" onclick="unassignRegistrant('${occ.id}')" title="Unassign attendee from room" style="padding:0.15rem;">
+                    <i class="fa-solid fa-xmark" style="font-size:0.75rem;"></i>
+                  </button>
+                </div>
+              `;
+            } else {
+              return `
+                <div class="bed-slot compact" onclick="openSelectAttendeeModal('${room.id}')" title="Click to assign attendee to this slot">
+                  <i class="fa-solid fa-bed mr-1"></i> Empty Bed
+                </div>
+              `;
+            }
+          }).join('');
+
+          return `
+            <div class="room-list-item" ondragover="allowRoomDrop(event)" ondragleave="dragRoomLeave(event)" ondrop="dropRoom(event, '${room.id}')" id="room-${room.id}">
+              <div class="room-drag-handle" onmousedown="enableRoomDrag(this)" onmouseup="disableRoomDrag(this)" onmouseleave="disableRoomDrag(this)">
+                <i class="fa-solid fa-grip-vertical"></i>
+              </div>
+              
+              <div class="room-list-info">
+                <div class="room-title" style="font-size: 1rem;">
                   <i class="fa-solid fa-door-open" style="color: #f58025;"></i>
                   ${escapeHtml(room.name)}
+                  ${categoryBadge}
                 </div>
-                <div class="room-meta">
+                <div class="room-meta" style="margin-top: 0.2rem;">
                   <span>Capacity: ${occupants.length}/${room.capacity}</span>
                   <span>|</span>
                   <span>${genderIcon} ${genderConstraintText}</span>
                 </div>
+                ${room.held_by ? `<div style="font-size: 0.75rem; color: #555; margin-top: 0.2rem;"><strong>Held By:</strong> ${escapeHtml(room.held_by)}</div>` : ''}
+                ${room.comments ? `<div style="font-size: 0.75rem; color: #777; font-style: italic; margin-top: 0.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(room.comments)}">"${escapeHtml(room.comments)}"</div>` : ''}
               </div>
-              <div class="room-actions">
-                <button class="unassign-btn mr-2" onclick="openRoomDetailsModal('${room.id}')" title="Room Details & Notes">
+
+              <div class="room-list-occupants" ondragover="allowDrop(event)" ondragleave="dragLeaveRoom(event)" ondrop="dropToRoom(event, '${room.id}')" style="min-height: 40px;">
+                ${slotsHtml}
+              </div>
+
+              <div class="room-list-warnings">
+                ${validation.warnings.length > 0 ? validation.warnings.map(w => `
+                  <div class="warning-item" style="color: #dc3545;">
+                    <i class="fa-solid ${w.type === 'error' ? 'fa-circle-xmark' : 'fa-circle-exclamation'}"></i>
+                    <span>${escapeHtml(w.text)}</span>
+                  </div>
+                `).join('') : occupants.length > 0 ? `
+                  <div class="room-success-msg" style="border: none; background: transparent; padding: 0;">
+                    <i class="fa-solid fa-circle-check text-success"></i>
+                    <span>All rules satisfied.</span>
+                  </div>
+                ` : '<span class="text-muted small">No occupants</span>'}
+              </div>
+
+              <div class="room-list-actions">
+                <button class="unassign-btn p-2" onclick="openRoomDetailsModal('${room.id}')" title="Room Details & Notes">
                   <i class="fa-solid fa-circle-info"></i>
                 </button>
-                <button class="room-delete-btn" onclick="deleteRoom('${room.id}')" title="Delete room and unassign attendees">
+                <button class="room-delete-btn p-2" onclick="deleteRoom('${room.id}')" title="Delete room and unassign attendees">
                   <i class="fa-solid fa-trash-can"></i>
                 </button>
               </div>
             </div>
-
-            <div class="room-occupants">
-              ${slotsHtml}
-            </div>
-
-            ${room.held_by || room.comments ? `
-              <div class="px-3 pb-2 pt-0" style="font-size: 0.75rem; border-top: 1px dashed #eee; background-color: #fafafa; color: #555; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; margin-top: -0.5rem; margin-bottom: 0.5rem;">
-                ${room.held_by ? `<div class="mt-1"><strong>Held By:</strong> ${escapeHtml(room.held_by)}</div>` : ''}
-                ${room.comments ? `<div class="mt-1 text-muted" style="white-space: pre-wrap; font-style: italic;">"${escapeHtml(room.comments)}"</div>` : ''}
-              </div>
-            ` : ''}
-
-            ${feedbackBlock}
-          </div>
-        `;
-      }).join('');
+          `;
+        }).join('');
+      }
 
       activeWarningsCount = warningsTally;
     }
@@ -1334,6 +1583,7 @@
     }
 
     function allowDrop(e) {
+      if (!draggedRegistrantId) return;
       e.preventDefault();
       const roomCard = e.currentTarget;
       roomCard.classList.add("dragover");
@@ -1390,6 +1640,85 @@
       await assignRegistrantToRoom(registrantId, null);
     }
 
+    // Room Drag-and-Drop Handlers
+    function enableRoomDrag(el) {
+      const card = el.closest('.room-card') || el.closest('.room-list-item');
+      if (card) {
+        card.setAttribute('draggable', 'true');
+      }
+    }
+
+    function disableRoomDrag(el) {
+      const card = el.closest('.room-card') || el.closest('.room-list-item');
+      if (card) {
+        card.setAttribute('draggable', 'false');
+      }
+    }
+
+    function dragRoomStart(e, roomId) {
+      draggedRoomId = roomId;
+      e.dataTransfer.setData("room-id", roomId);
+      e.dataTransfer.effectAllowed = "move";
+      
+      const card = document.getElementById(`room-${roomId}`);
+      if (card) {
+        card.classList.add("room-dragging");
+      }
+    }
+
+    function dragRoomEnd(e) {
+      draggedRoomId = null;
+      document.querySelectorAll(".room-card, .room-list-item").forEach(el => {
+        el.classList.remove("room-dragging");
+        el.classList.remove("room-dragover");
+        el.setAttribute('draggable', 'false');
+      });
+    }
+
+    function allowRoomDrop(e) {
+      if (!draggedRoomId) return;
+      e.preventDefault();
+      e.currentTarget.classList.add("room-dragover");
+    }
+
+    function dragRoomLeave(e) {
+      e.currentTarget.classList.remove("room-dragover");
+    }
+
+    async function dropRoom(e, targetRoomId) {
+      e.preventDefault();
+      e.currentTarget.classList.remove("room-dragover");
+      
+      const sourceRoomId = e.dataTransfer.getData("room-id") || draggedRoomId;
+      if (!sourceRoomId || sourceRoomId === targetRoomId) return;
+
+      const sourceIdx = allRooms.findIndex(r => r.id === sourceRoomId);
+      const targetIdx = allRooms.findIndex(r => r.id === targetRoomId);
+      if (sourceIdx === -1 || targetIdx === -1) return;
+
+      // Reorder local list
+      const [movedRoom] = allRooms.splice(sourceIdx, 1);
+      allRooms.splice(targetIdx, 0, movedRoom);
+
+      calculateStatsAndRender();
+
+      // Save to backend
+      try {
+        const response = await fetch("/api/admin/rooms/reorder", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ room_ids: allRooms.map(r => r.id) })
+        });
+        if (!response.ok) {
+          throw new Error("Failed to save room order");
+        }
+      } catch (err) {
+        console.error("Error saving room order:", err);
+      }
+    }
+
     // API calls
     async function assignRegistrantToRoom(registrantId, roomId) {
       try {
@@ -1437,6 +1766,7 @@
       const name = document.getElementById("room-name").value.trim();
       const capacity = parseInt(document.getElementById("room-capacity").value);
       const room_gender = document.getElementById("room-gender").value;
+      const category = document.getElementById("room-category").value || null;
 
       try {
         const response = await fetch("/api/admin/rooms", {
@@ -1447,7 +1777,8 @@
           body: JSON.stringify({
             name: name,
             capacity: capacity,
-            room_gender: room_gender
+            room_gender: room_gender,
+            category: category
           })
         });
 
@@ -1548,6 +1879,7 @@
       document.getElementById("details-room-name").innerText = room.name;
       document.getElementById("details-held-by").value = room.held_by || "";
       document.getElementById("details-comments").value = room.comments || "";
+      document.getElementById("details-category-input").value = room.category || "";
 
       const unoccupiedFields = document.getElementById("details-unoccupied-fields");
       const occupiedInfo = document.getElementById("details-occupied-info");
@@ -1587,7 +1919,8 @@
 
       const payload = {
         held_by: heldBy || null,
-        comments: comments || null
+        comments: comments || null,
+        category: document.getElementById("details-category-input").value || null
       };
 
       if (unoccupiedFieldsVisible) {

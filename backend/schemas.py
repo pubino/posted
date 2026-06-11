@@ -239,6 +239,8 @@ class RoomResponse(BaseModel):
     room_gender: str
     held_by: Optional[str] = None
     comments: Optional[str] = None
+    category: Optional[str] = None
+    sort_order: int = 0
     created_at: datetime.datetime
 
     class Config:
@@ -249,6 +251,7 @@ class RoomCreate(BaseModel):
     name: str
     capacity: int = 2
     room_gender: str = "Any"
+    category: Optional[str] = None
 
 
 class RoomUpdate(BaseModel):
@@ -257,6 +260,13 @@ class RoomUpdate(BaseModel):
     name: Optional[str] = None
     capacity: Optional[int] = None
     room_gender: Optional[str] = None
+    category: Optional[str] = None
+    sort_order: Optional[int] = None
+
+
+class RoomReorderPayload(BaseModel):
+    room_ids: List[str]
+
 
 
 class RoomAssignmentPayload(BaseModel):
